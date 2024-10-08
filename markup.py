@@ -15,6 +15,7 @@ main_menu = ReplyKeyboardMarkup(
 
     resize_keyboard=True,
     one_time_keyboard=True,
-    input_field_placeholder="Выбирите вариант.. "
+    input_field_placeholder="Выберите вариант.. "
 )
 
+#Nothing here
