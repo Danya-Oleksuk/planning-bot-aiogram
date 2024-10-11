@@ -2,3 +2,4 @@ asyncio~=3.4.3
 logging~=0.4.9.6
 aiogram~=3.3.0
 python-dotenv~=1.0.1
+pymongo~=4.9.2
