@@ -18,4 +18,3 @@ main_menu = ReplyKeyboardMarkup(
     input_field_placeholder="Выберите вариант.. "
 )
 
-#Nothing here

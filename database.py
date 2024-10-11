@@ -1,5 +1,7 @@
 import datetime
 import sqlite3
+import pymongo
+
 
 def create_telegram_channel_db():
   conn = sqlite3.connect('users_data_base.db')
@@ -40,3 +42,46 @@ def new_user_insert(user_id: int, first_name: str, last_name: str):
 
     conn.commit()
     conn.close()
+
+
+tasks_collection = None
+
+async def create_mongo_database():
+    global tasks_collection
+
+    main_client = pymongo.AsyncMongoClient("localhost", 27017)
+    db = main_client['tasks_database']
+
+    await db.drop_collection('tasks') # !!! Dropping collection after each reload
+    tasks_collection = db['tasks']
+
+async def add_task(user_id: int, task_description: str):
+    if tasks_collection is not None:
+        task = {
+            "user_id": user_id,
+            "task": task_description,
+            "status": "⏳Не выполнено"
+        }
+        await tasks_collection.insert_one(task)
+
+async def get_tasks(user_id: int):
+
+    lst = []
+    async for data in tasks_collection.find():
+        lst.append(data.get("task"))
+    return lst
+
+async def edit_task(): #Topic
+    pass
+
+async def update_task(): #Status
+    pass
+
+async def delete_task():
+    pass
+
+async def delete_all_tasks(user_id: int):
+    if not await get_tasks(user_id):
+        return False
+    await tasks_collection.delete_many({"user_id": user_id})
+    return True
