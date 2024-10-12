@@ -1,5 +1,5 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
-from aiogram.utils.keyboard import InlineKeyboardBuilder
+from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 
 main_menu = ReplyKeyboardMarkup(
     keyboard=[
@@ -22,11 +22,15 @@ main_menu = ReplyKeyboardMarkup(
 edit_menu = ReplyKeyboardMarkup(
     keyboard=[
         [
-            KeyboardButton(text="➕Добавить задачу"),
-            KeyboardButton(text="❌Удалить задачу"),
+            KeyboardButton(text="➕ Добавить задачу"),
+            KeyboardButton(text="❌ Удалить задачу"),
         ],
         [
-            KeyboardButton(text="⬅️Назад"),
+                KeyboardButton(text="🧹 Очистить весь план"),
+            KeyboardButton(text="✔️ Изменить статус задачи"),
+        ],
+        [
+            KeyboardButton(text="⬅️ Назад"),
         ],
     ],
 
@@ -35,11 +39,12 @@ edit_menu = ReplyKeyboardMarkup(
     input_field_placeholder="Выберите вариант.. "
 )
 
-def inline_builder(num):
+def inline_builder(num: int, emoji: str, action: str):
     builder = InlineKeyboardBuilder()
 
     for x in range(num):
-        builder.button(text=str(f"🗑 {x + 1}"), callback_data=f"delete_{x + 1}")
+        builder.button(text=str(f"{emoji} {x + 1}"), callback_data=f"{action}_{x + 1}")
+    builder.add(InlineKeyboardButton(text="⬅️ Назад", callback_data='back_to_edit'))
     builder.adjust(5)
 
-    return builder
+    return builder.as_markup()

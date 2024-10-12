@@ -1,6 +1,7 @@
 import datetime
 import sqlite3
 import pymongo
+from selenium.webdriver.common.devtools.v122.runtime import await_promise
 
 
 def create_telegram_channel_db():
@@ -44,10 +45,11 @@ def new_user_insert(user_id: int, first_name: str, last_name: str):
     conn.close()
 
 
+db = None
 tasks_collection = None
 
 async def create_mongo_database():
-    global tasks_collection
+    global tasks_collection, db
 
     main_client = pymongo.AsyncMongoClient("localhost", 27017)
     db = main_client['tasks_database']
@@ -60,7 +62,7 @@ async def add_task(user_id: int, task_description: str):
         task = {
             "user_id": user_id,
             "task": task_description,
-            "status": "⏳Не выполнено"
+            "status": "Не выполнено"
         }
         await tasks_collection.insert_one(task)
 
@@ -68,20 +70,29 @@ async def get_tasks(user_id: int):
     lst = []
 
     async for data in tasks_collection.find({"user_id": user_id}):
-        lst.append(data.get("task"))
+        lst.append({data.get("task"): data.get("status")})
     return lst
 
 async def count_tasks(user_id: int):
     return await tasks_collection.count_documents({"user_id": user_id})
 
+async def get_status(user_id: int, task_number: int):
+    data = await tasks_collection.find_one({"user_id": user_id})
+    return data.get("status")
 
+async def edit_task_status(user_id, task_number):  #Status
+    if not await get_tasks(user_id):
+        return False
 
-async def edit_task():  #Topic
-    pass
+    task_cursor = tasks_collection.find({"user_id": user_id})
 
-async def update_task_status():  #Status
-    pass
+    tasks_list = []
+    async for task in task_cursor:
+        tasks_list.append(task)
 
+    task_to_update = tasks_list[task_number - 1]
+    await db.tasks.update_one({"user_id": user_id, "task": task_to_update.get("task")}, {"$set": {"status": "Выполнено"}})
+    return True
 
 async def delete_task(number_of_task: int, user_id: int):
     if not await get_tasks(user_id):

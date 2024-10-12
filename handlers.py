@@ -6,7 +6,8 @@ from aiogram.filters import Command
 
 import markup
 from utils import TaskForm, check_and_notify_registration, check_and_notify_fsm_state
-from database import is_user_in_database, new_user_insert, tasks_collection, get_tasks, add_task, edit_task, delete_all_tasks,  delete_task, count_tasks
+from database import (is_user_in_database, new_user_insert,get_tasks, add_task, edit_task_status,
+                      delete_all_tasks, delete_task, count_tasks)
 
 
 router = Router()
@@ -22,7 +23,7 @@ async def start(message: Message, state: FSMContext):
         new_user_insert(user_id=message.from_user.id,
                         first_name=message.from_user.first_name,
                         last_name=message.from_user.last_name)
-        await message.answer("Привет, вы зарегистрировались, удачи в планировании!", reply_markup=markup.main_menu)
+        await message.answer("👋 Привет, вы зарегистрировались, удачи в планировании!", reply_markup=markup.main_menu)
 
 @router.message(F.text.in_(['ℹ️Помощь по командам', '/help', '/info']))
 async def help(message: Message, state: FSMContext):
@@ -50,12 +51,19 @@ async def show_plan(message: Message, state: FSMContext):
 
     tasks = await get_tasks(user_id=message.from_user.id)
     if not tasks:
-        await message.answer("❗️Ваш План на сегодня пуст!", reply_markup=markup.main_menu)
+        await message.answer("❗️Ваш план на сегодня пуст!", reply_markup=markup.main_menu)
     else:
-        await message.answer(f"Твой план:\n\n" + "\n".join([f"{i+1}. {task} - ⏳" for i, task in enumerate(tasks)]),
-                             reply_markup=markup.main_menu)
+        await message.answer(
+            "🗂 <b>Твой план:</b>\n\n" +
+            "\n".join(
+                [f"{i + 1}. {list(task.keys())[0]} — {'✅' if list(task.values())[0] == 'Выполнено' else '❌'}" for
+                 i, task in
+                 enumerate(tasks)]),
+            reply_markup=markup.main_menu,
+            parse_mode=ParseMode.HTML
+        )
 
-@router.message(F.text.in_(['/clear_plan']))
+@router.message(F.text.in_(['🧹 Очистить весь план', '/clear_plan']))
 async def clear_plan(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
@@ -77,11 +85,9 @@ async def edit_plan(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    tasks = await get_tasks(user_id=message.from_user.id)
-    await message.answer(f"Твой план:\n\n" + "\n".join([f"⏳{i + 1}. {task}" for i, task in enumerate(tasks)]),
-                             reply_markup=markup.edit_menu)
+    await message.answer("🖋 Меню редактирования: ", reply_markup=markup.edit_menu)
 
-@router.message(F.text.in_(['➕Добавить задачу', '/add_task']))
+@router.message(F.text.in_(['➕ Добавить задачу', '/add_task']))
 async def create_task(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
@@ -92,8 +98,27 @@ async def create_task(message: Message, state: FSMContext):
     await message.answer("✍️Введите название задачи:", reply_markup=ReplyKeyboardRemove())
     await state.set_state(TaskForm.task_name)
 
-@router.message(F.text.in_(['❌Удалить задачу', '/remove_task']))
-async def remove_task(message: Message, state: FSMContext):
+@router.message(F.text.in_(['❌ Удалить задачу', '/remove_task']))
+async def initiate_task_removal(message: Message, state: FSMContext):
+    if not await check_and_notify_registration(message):
+        return
+
+    if not await check_and_notify_fsm_state(message, state):
+        return
+
+    tasks = await get_tasks(user_id=message.from_user.id)
+
+    if not tasks:
+        await message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
+    else:
+        tasks = [key for task in tasks for key in task.keys()]
+        await message.answer(f"Выберете задачу, которую вы хотите удалить:\n\n" + "\n".join(
+            [f"{i + 1}. {task}" for i, task in enumerate(tasks)]),
+                             reply_markup=markup.inline_builder(num=await count_tasks(user_id=message.from_user.id),
+                                                                emoji="🗑", action="delete"))
+
+@router.message(F.text.in_(['✔️ Изменить статус задачи', '/edit_task_status']))
+async def edit_task_status_(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
 
@@ -104,11 +129,14 @@ async def remove_task(message: Message, state: FSMContext):
     if not tasks:
         await message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
     else:
-        await message.answer(f"Выберете задачу, которую вы хотите удалить:\n\n" + "\n".join([f"{i + 1}. {task}" for i, task in enumerate(tasks)]),
-                             reply_markup=markup.inline_builder(num=await count_tasks(user_id=message.from_user.id)).as_markup())
+        tasks = [key for task in tasks for key in task.keys()]
+        await message.answer(f"Выберете задачу, которую вы хотите выполнить:\n\n" + "\n".join(
+            [f"{i + 1}. {task}" for i, task in enumerate(tasks)]),
+                             reply_markup=markup.inline_builder(num=await count_tasks(user_id=message.from_user.id),
+                                                                emoji="✅", action="update"))
 
-@router.message(F.text.in_(['⬅️Назад', ]))
-async def back(message: Message, state: FSMContext):
+@router.message(F.text.in_(['⬅️ Назад', ]))
+async def back_1(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
 
@@ -117,6 +145,17 @@ async def back(message: Message, state: FSMContext):
 
     await message.answer('⚙️ Меню', reply_markup=markup.main_menu)
 
+@router.callback_query(F.data == 'back_to_edit')
+async def back_2(call: CallbackQuery, state: FSMContext):
+    if not await check_and_notify_registration(call):
+        return
+
+    if not await check_and_notify_fsm_state(call, state):
+        return
+
+    await call.message.answer('⚙️ Меню редактирования', reply_markup=markup.edit_menu)
+    await call.answer('⚙️ Меню редактирования')
+
 @router.message(TaskForm.task_name)
 async def task_name(message: Message, state: FSMContext):
     await add_task(user_id=message.from_user.id, task_description=message.text)
@@ -124,25 +163,54 @@ async def task_name(message: Message, state: FSMContext):
     await message.answer('✅Задача была добавлена', reply_markup=markup.edit_menu)
 
 @router.callback_query(F.data.startswith('delete_'))
-async def task_remove(call: CallbackQuery):
+async def confirm_task_removal(call: CallbackQuery):
     task_num = int(call.data.split('_')[1])
     result = await delete_task(number_of_task=task_num, user_id=call.from_user.id)
 
     if result is True:
         tasks = await get_tasks(user_id=call.from_user.id)
 
+        tasks = [key for task in tasks for key in task.keys()]
+
         if not tasks:
-            await call.message.answer("❗️Теперь ваш план пуст", reply_markup=markup.edit_menu)
+            await call.message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
         else:
-            await call.message.answer(f"Выберете задачу, которую вы хотите удалить:\n\n" + "\n".join([f"{i + 1}. {task}" for i, task in enumerate(tasks)]),
-                                 reply_markup=markup.inline_builder(num=await count_tasks(user_id=call.from_user.id)).as_markup())
+            await call.message.answer(f"Выберете задачу, которую вы хотите удалить:\n\n" + "\n".join(
+                [f"{i + 1}. {task}" for i, task in enumerate(tasks)]),
+                                 reply_markup=markup.inline_builder(num=await count_tasks(user_id=call.from_user.id),
+                                                                    emoji="🗑", action="delete"))
         await call.answer("Удалил")
 
     elif result is False:
         await call.answer("Что то пошло не так!")
 
+@router.callback_query(F.data.startswith('update_'))
+async def update_task_status(call: CallbackQuery):
+    task_num = int(call.data.split('_')[1])
+    result = await edit_task_status(user_id=call.from_user.id, task_number=task_num)
+
+    if result is True:
+        tasks = await get_tasks(user_id=call.from_user.id)
+
+        if not tasks:
+            await call.message.answer("❗️Ваш план теперь пуст", reply_markup=markup.main_menu)
+            return
+
+        tasks_list = [
+            f"{i + 1}. {list(task.keys())[0]} - <i>{list(task.values())[0]}</i>"
+            for i, task in enumerate(tasks)
+        ]
+
+        await call.message.answer(
+            f"Выберите задачу, которую вы хотите выполнить:\n\n" + "\n".join(tasks_list), parse_mode=ParseMode.HTML,
+            reply_markup=markup.inline_builder(num=await count_tasks(user_id=call.from_user.id), emoji="✅", action="update"))
+        await call.answer("Обновил")
+
+    elif result is False:
+        await call.answer("Что-то пошло не так!")
+
 @router.message()
-async def error(message: Message, state: FSMContext):
+async def error(message: Message):
     if not await check_and_notify_registration(message):
         return
 
