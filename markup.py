@@ -23,11 +23,11 @@ edit_menu = ReplyKeyboardMarkup(
     keyboard=[
         [
             KeyboardButton(text="➕ Добавить задачу"),
-            KeyboardButton(text="❌ Удалить задачу"),
+            KeyboardButton(text="✔️ Изменить статус задачи"),
         ],
         [
+                KeyboardButton(text="❌ Удалить задачу"),
                 KeyboardButton(text="🧹 Очистить весь план"),
-            KeyboardButton(text="✔️ Изменить статус задачи"),
         ],
         [
             KeyboardButton(text="⬅️ Назад"),

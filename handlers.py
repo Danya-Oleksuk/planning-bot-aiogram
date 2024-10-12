@@ -75,7 +75,7 @@ async def clear_plan(message: Message, state: FSMContext):
     if res is True:
         await message.answer(f"❗️Теперь ваш план пуст", reply_markup=markup.main_menu)
     else:
-        await message.answer(f"❗️План и так пуст!", reply_markup=markup.main_menu)
+        await message.answer(f"❗️План и так пуст!", reply_markup=markup.edit_menu)
 
 @router.message(F.text.in_(['📝Редактировать план', '/edit_plan']))
 async def edit_plan(message: Message, state: FSMContext):
@@ -160,7 +160,7 @@ async def back_2(call: CallbackQuery, state: FSMContext):
 async def task_name(message: Message, state: FSMContext):
     await add_task(user_id=message.from_user.id, task_description=message.text)
     await state.clear()
-    await message.answer('✅Задача была добавлена', reply_markup=markup.edit_menu)
+    await message.answer('✅ Задача была добавлена', reply_markup=markup.edit_menu)
 
 @router.callback_query(F.data.startswith('delete_'))
 async def confirm_task_removal(call: CallbackQuery):
