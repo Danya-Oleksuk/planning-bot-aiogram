@@ -75,7 +75,7 @@ async def clear_plan(message: Message, state: FSMContext):
     if res is True:
         await message.answer(f"❗️Теперь ваш план пуст", reply_markup=markup.main_menu)
     else:
-        await message.answer(f"❗️План и так пуст!", reply_markup=markup.edit_menu)
+        await message.answer(f"❗️План и так пуст", reply_markup=markup.edit_menu)
 
 @router.message(F.text.in_(['📝Редактировать план', '/edit_plan']))
 async def edit_plan(message: Message, state: FSMContext):
@@ -95,7 +95,7 @@ async def create_task(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    await message.answer("✍️Введите название задачи:", reply_markup=ReplyKeyboardRemove())
+    await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
     await state.set_state(TaskForm.task_name)
 
 @router.message(F.text.in_(['❌ Удалить задачу', '/remove_task']))
@@ -111,6 +111,7 @@ async def initiate_task_removal(message: Message, state: FSMContext):
     if not tasks:
         await message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
     else:
+
         tasks = [key for task in tasks for key in task.keys()]
         await message.answer(f"Выберете задачу, которую вы хотите удалить:\n\n" + "\n".join(
             [f"{i + 1}. {task}" for i, task in enumerate(tasks)]),
@@ -130,6 +131,7 @@ async def edit_task_status_(message: Message, state: FSMContext):
         await message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
     else:
         tasks = [key for task in tasks for key in task.keys()]
+        ReplyKeyboardRemove()
         await message.answer(f"Выберете задачу, которую вы хотите выполнить:\n\n" + "\n".join(
             [f"{i + 1}. {task}" for i, task in enumerate(tasks)]),
                              reply_markup=markup.inline_builder(num=await count_tasks(user_id=message.from_user.id),
@@ -139,25 +141,16 @@ async def edit_task_status_(message: Message, state: FSMContext):
 async def back_1(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
-
     if not await check_and_notify_fsm_state(message, state):
         return
 
     await message.answer('⚙️ Меню', reply_markup=markup.main_menu)
 
-@router.callback_query(F.data == 'back_to_edit')
-async def back_2(call: CallbackQuery, state: FSMContext):
-    if not await check_and_notify_registration(call):
-        return
-
-    if not await check_and_notify_fsm_state(call, state):
-        return
-
-    await call.message.answer('⚙️ Меню редактирования', reply_markup=markup.edit_menu)
-    await call.answer('⚙️ Меню редактирования')
-
 @router.message(TaskForm.task_name)
 async def task_name(message: Message, state: FSMContext):
+    if len(message.text) > 20:
+        await message.answer("❗️Название задачи не должно быть больше 20 символов\n\n✍️  Введите название задачи:")
+        return
     await add_task(user_id=message.from_user.id, task_description=message.text)
     await state.clear()
     await message.answer('✅ Задача была добавлена', reply_markup=markup.edit_menu)

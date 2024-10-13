@@ -16,7 +16,7 @@ async def main():
     database.create_telegram_channel_db()
     await database.create_mongo_database()
 
-    bot = Bot(token=BOT_TOKEN, parse_mode='HTML')
+    bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
 
     dp.include_router(handlers.router)
@@ -25,4 +25,7 @@ async def main():
     await dp.start_polling(bot)
 
 if __name__ == '__main__':
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        pass

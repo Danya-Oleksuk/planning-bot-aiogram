@@ -1,4 +1,4 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 
 main_menu = ReplyKeyboardMarkup(
@@ -15,7 +15,6 @@ main_menu = ReplyKeyboardMarkup(
     ],
 
     resize_keyboard=True,
-    one_time_keyboard=True,
     input_field_placeholder="Выберите вариант.. "
 )
 
@@ -35,7 +34,6 @@ edit_menu = ReplyKeyboardMarkup(
     ],
 
     resize_keyboard=True,
-    one_time_keyboard=True,
     input_field_placeholder="Выберите вариант.. "
 )
 
@@ -44,7 +42,6 @@ def inline_builder(num: int, emoji: str, action: str):
 
     for x in range(num):
         builder.button(text=str(f"{emoji} {x + 1}"), callback_data=f"{action}_{x + 1}")
-    builder.add(InlineKeyboardButton(text="⬅️ Назад", callback_data='back_to_edit'))
     builder.adjust(5)
 
     return builder.as_markup()

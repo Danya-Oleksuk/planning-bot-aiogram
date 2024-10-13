@@ -1,8 +1,11 @@
 import datetime
+import os
 import sqlite3
 import pymongo
-from selenium.webdriver.common.devtools.v122.runtime import await_promise
 
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def create_telegram_channel_db():
     conn = sqlite3.connect('users_data_base.db')
@@ -51,10 +54,9 @@ tasks_collection = None
 async def create_mongo_database():
     global tasks_collection, db
 
-    main_client = pymongo.AsyncMongoClient("localhost", 27017)
+    main_client = pymongo.AsyncMongoClient(os.environ.get('MONGO_API_TOKEN'))
     db = main_client['tasks_database']
 
-    await db.drop_collection('tasks')  # !!! Dropping collection after each reload
     tasks_collection = db['tasks']
 
 async def add_task(user_id: int, task_description: str):
@@ -66,6 +68,7 @@ async def add_task(user_id: int, task_description: str):
         }
         await tasks_collection.insert_one(task)
 
+
 async def get_tasks(user_id: int):
     lst = []
 
@@ -76,7 +79,7 @@ async def get_tasks(user_id: int):
 async def count_tasks(user_id: int):
     return await tasks_collection.count_documents({"user_id": user_id})
 
-async def get_status(user_id: int, task_number: int):
+async def get_status(user_id: int):
     data = await tasks_collection.find_one({"user_id": user_id})
     return data.get("status")
 
@@ -104,10 +107,8 @@ async def delete_task(number_of_task: int, user_id: int):
     if number_of_task - 1 < len(tasks_list):
         task_to_delete = tasks_list[number_of_task - 1]
 
-        res = await tasks_collection.delete_one(
-            {"user_id": user_id, "task": task_to_delete.get("task"), "status": task_to_delete.get("status")})
+        await tasks_collection.delete_one({"user_id": user_id, "task": task_to_delete.get("task"), "status": task_to_delete.get("status")})
         return True
-
     else:
         return False
 
