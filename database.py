@@ -47,6 +47,14 @@ def new_user_insert(user_id: int, first_name: str, last_name: str):
     conn.commit()
     conn.close()
 
+def get_all_users():
+    db_name = 'users_data_base.db'
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT telegram_id, first_name, joined_at FROM users')
+    result = cursor.fetchall()
+    return result
 
 db = None
 tasks_collection = None
@@ -75,6 +83,14 @@ async def get_tasks(user_id: int):
     async for data in tasks_collection.find({"user_id": user_id}):
         lst.append({data.get("task"): data.get("status")})
     return lst
+
+async def get_all_tasks():
+    lst = []
+
+    async for data in tasks_collection.find():
+        lst.append(f"{data.get("user_id")} - {data.get("task")} - {data.get('status')}")
+    return lst
+
 
 async def count_tasks(user_id: int):
     return await tasks_collection.count_documents({"user_id": user_id})

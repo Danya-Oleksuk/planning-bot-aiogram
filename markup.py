@@ -1,8 +1,9 @@
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 
-main_menu = ReplyKeyboardMarkup(
-    keyboard=[
+
+def get_menu(is_admin: bool):
+    buttons = [
         [
             KeyboardButton(text="📋План"),
         ],
@@ -12,11 +13,12 @@ main_menu = ReplyKeyboardMarkup(
         [
             KeyboardButton(text="ℹ️Помощь по командам"),
         ],
-    ],
+    ]
 
-    resize_keyboard=True,
-    input_field_placeholder="Выберите вариант.. "
-)
+    if is_admin:
+        buttons.append([KeyboardButton(text="➡️ Админ панель")])
+
+    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True, input_field_placeholder="Выберите вариант.. ")
 
 edit_menu = ReplyKeyboardMarkup(
     keyboard=[
@@ -35,6 +37,19 @@ edit_menu = ReplyKeyboardMarkup(
 
     resize_keyboard=True,
     input_field_placeholder="Выберите вариант.. "
+)
+admin_panel = ReplyKeyboardMarkup(
+    keyboard=[
+        [
+            KeyboardButton(text="👥 Вывести пользователей"),
+            KeyboardButton(text="📋 Вывести все коллекции"),
+        ],
+        [
+            KeyboardButton(text="⬅️ Назад"),
+        ],
+    ],
+
+    resize_keyboard=True,
 )
 
 def inline_builder(num: int, emoji: str, action: str):
