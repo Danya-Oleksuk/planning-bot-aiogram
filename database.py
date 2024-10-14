@@ -88,7 +88,7 @@ async def get_all_tasks():
     lst = []
 
     async for data in tasks_collection.find():
-        lst.append(f"{data.get("user_id")} - {data.get("task")} - {data.get('status')}")
+        lst.append(f"{data.get('user_id')} - {data.get('task')} - {data.get('status')}")
     return lst
 
 
