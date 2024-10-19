@@ -1,4 +1,4 @@
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove, InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 
 
@@ -38,6 +38,7 @@ edit_menu = ReplyKeyboardMarkup(
     resize_keyboard=True,
     input_field_placeholder="Выберите вариант.. "
 )
+
 admin_panel = ReplyKeyboardMarkup(
     keyboard=[
         [
@@ -46,6 +47,22 @@ admin_panel = ReplyKeyboardMarkup(
         ],
         [
             KeyboardButton(text="⬅️ Назад"),
+        ],
+    ],
+
+    resize_keyboard=True,
+)
+
+vip_menu = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(text="7 дней за 100 ⭐️ / $1.99", callback_data='vip'),
+        ],
+        [
+            InlineKeyboardButton(text="1 месяц за 200 ⭐️ / $3.99", callback_data='vip'),
+        ],
+        [
+            InlineKeyboardButton(text="1 год за 500 ⭐️ / $9.49", callback_data='vip')
         ],
     ],
 

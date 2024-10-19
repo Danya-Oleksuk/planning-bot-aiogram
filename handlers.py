@@ -10,7 +10,7 @@ import os
 import markup
 from utils import TaskForm, check_and_notify_registration, check_and_notify_fsm_state
 from database import (is_user_in_database, new_user_insert,get_tasks, add_task, edit_task_status,
-                      delete_all_tasks, delete_task, count_tasks, get_all_tasks, get_all_users)
+                      delete_all_tasks, delete_task, count_tasks, get_all_tasks, get_all_users, is_vip)
 
 load_dotenv()
 
@@ -40,7 +40,7 @@ async def show_all_users(message: Message, state: FSMContext):
 
     if message.from_user.id == int(admin_id):
         users = get_all_users()
-        users_data = [f"{i} - {x} - {z}" for i, x, z in users]
+        users_data = [f"{i} - {x} - @{z} - {y}" for i, x, z, y in users]
         await message.answer(text="\n".join(users_data))
     else:
         await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
@@ -72,8 +72,11 @@ async def start(message: Message, state: FSMContext):
     else:
         new_user_insert(user_id=message.from_user.id,
                         first_name=message.from_user.first_name,
-                        last_name=message.from_user.last_name)
-        await message.answer("👋 Привет, вы зарегистрировались, удачи в планировании!", reply_markup=markup.get_menu(False))
+                        username=message.from_user.username,
+                        last_name=message.from_user.last_name,
+                        is_vip=True if message.from_user.id == int(admin_id) else False)
+        await message.answer("👋 Привет, вы зарегистрировались, удачи в планировании!",
+                             reply_markup=markup.get_menu(True if message.from_user.id == int(admin_id) else False))
 
 @router.message(F.text.in_(['ℹ️Помощь по командам', '/help', '/info']))
 async def help(message: Message, state: FSMContext):
@@ -118,7 +121,7 @@ async def show_plan(message: Message, state: FSMContext):
             await message.answer(
                 "🗂 <b>Твой план:</b>\n\n" +
                 "\n".join(
-                    [f"{i + 1}. {list(task.keys())[0]} — {'✅' if list(task.values())[0] == 'Выполнено' else '❌'}" for
+                    [f"{i + 1}. {list(task.keys())[0]} — {list(task.values())[0]}" for
                      i, task in
                      enumerate(tasks)]),
                 reply_markup=markup.get_menu(True),
@@ -128,7 +131,7 @@ async def show_plan(message: Message, state: FSMContext):
             await message.answer(
                 "🗂 <b>Твой план:</b>\n\n" +
                 "\n".join(
-                    [f"{i + 1}. {list(task.keys())[0]} — {'✅' if list(task.values())[0] == 'Выполнено' else '❌'}" for
+                    [f"{i + 1}. {list(task.keys())[0]} — {list(task.values())[0]}" for
                      i, task in
                      enumerate(tasks)]),
                 reply_markup=markup.get_menu(False),
@@ -170,8 +173,31 @@ async def create_task(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
-    await state.set_state(TaskForm.task_name)
+    if await count_tasks(user_id=message.from_user.id) < 3:
+        await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
+        await state.set_state(TaskForm.task_name)
+    elif is_vip(user_id=message.from_user.id):
+        await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
+        await state.set_state(TaskForm.task_name)
+    else:
+        await message.answer("✍️ К сожалению лимит исчерпан, /pay", reply_markup=markup.edit_menu)
+
+@router.message(Command('pay'))
+async def pay(message: Message, state: FSMContext):
+    if not await check_and_notify_registration(message):
+        return
+
+    if not await check_and_notify_fsm_state(message, state):
+        return
+
+    if message.from_user.id == int(admin_id):
+        await message.answer("👨🏻‍💻 Ты и так админ", reply_markup=markup.get_menu(True))
+    else:
+        await message.answer("<b>Приобретая премиум, вы открываете для себя расширенные возможности:</b>"
+                             "\n\n📌 <i>Отсутствие лимита задач</i>"
+                             "\n📌 <i>Отсутствие рекламы</i>"
+                             "\n📌 <i>Поддержка бота</i>"
+                             "\n\n<i>Выберите подходящий для вас срок подписки:</i>", parse_mode=ParseMode.HTML, reply_markup=markup.vip_menu)
 
 @router.message(F.text.in_(['❌ Удалить задачу', '/remove_task']))
 async def initiate_task_removal(message: Message, state: FSMContext):
@@ -206,7 +232,6 @@ async def edit_task_status_(message: Message, state: FSMContext):
         await message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
     else:
         tasks = [key for task in tasks for key in task.keys()]
-        ReplyKeyboardRemove()
         await message.answer(f"Выберете задачу, которую вы хотите выполнить:\n\n" + "\n".join(
             [f"{i + 1}. {task}" for i, task in enumerate(tasks)]),
                              reply_markup=markup.inline_builder(num=await count_tasks(user_id=message.from_user.id),
@@ -269,7 +294,6 @@ async def update_task_status(call: CallbackQuery):
             else:
                 await call.message.answer("❗️Ваш план теперь пуст", reply_markup=markup.get_menu(False))
             return
-
         tasks_list = [
             f"{i + 1}. {list(task.keys())[0]} - <i>{list(task.values())[0]}</i>"
             for i, task in enumerate(tasks)

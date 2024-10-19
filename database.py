@@ -17,6 +17,9 @@ def create_telegram_channel_db():
           telegram_id INTEGER UNIQUE,
           first_name TEXT,
           last_name TEXT,
+          username TEXT,
+          is_vip BOOLEAN DEFAULT FALSE,
+          vip_until TIMESTAMP defalut NULL,
           joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
@@ -34,25 +37,35 @@ def is_user_in_database(telegram_id: int):
 
     return result is not None
 
-def new_user_insert(user_id: int, first_name: str, last_name: str):
+def new_user_insert(user_id: int, first_name: str, last_name: str, username: str, is_vip: bool = False):
     db_name = 'users_data_base.db'
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
 
     cursor.execute('''
-            INSERT INTO users (telegram_id, first_name, last_name, joined_at)
-            VALUES (?, ?, ?, ?)
-        ''', (user_id, first_name, last_name, datetime.datetime.now()))
+            INSERT INTO users (telegram_id, first_name, last_name, username, is_vip, joined_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (user_id, first_name, last_name, username, is_vip, datetime.datetime.now()))
 
     conn.commit()
     conn.close()
+
+def is_vip(user_id: int):
+    db_name = 'users_data_base.db'
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT is_vip FROM users WHERE telegram_id = ?', (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+    return result[0] == 1
 
 def get_all_users():
     db_name = 'users_data_base.db'
     conn = sqlite3.connect(db_name)
     cursor = conn.cursor()
 
-    cursor.execute('SELECT telegram_id, first_name, joined_at FROM users')
+    cursor.execute('SELECT telegram_id, first_name, username, joined_at FROM users')
     result = cursor.fetchall()
     return result
 
@@ -72,10 +85,9 @@ async def add_task(user_id: int, task_description: str):
         task = {
             "user_id": user_id,
             "task": task_description,
-            "status": "Не выполнено"
+            "status": "❌"
         }
         await tasks_collection.insert_one(task)
-
 
 async def get_tasks(user_id: int):
     lst = []
@@ -91,7 +103,6 @@ async def get_all_tasks():
         lst.append(f"{data.get('user_id')} - {data.get('task')} - {data.get('status')}")
     return lst
 
-
 async def count_tasks(user_id: int):
     return await tasks_collection.count_documents({"user_id": user_id})
 
@@ -99,18 +110,25 @@ async def get_status(user_id: int):
     data = await tasks_collection.find_one({"user_id": user_id})
     return data.get("status")
 
-async def edit_task_status(user_id, task_number):  #Status
+async def edit_task_status(user_id, task_number):
     if not await get_tasks(user_id):
         return False
 
-    task_cursor = tasks_collection.find({"user_id": user_id})
+    task_cursor = tasks_collection.find({"user_id": user_id}).sort([("_id", 1)])
 
     tasks_list = []
     async for task in task_cursor:
         tasks_list.append(task)
 
+    if task_number > len(tasks_list):
+        return False
+
     task_to_update = tasks_list[task_number - 1]
-    await db.tasks.update_one({"user_id": user_id, "task": task_to_update.get("task")}, {"$set": {"status": "Выполнено"}})
+
+    await db.tasks.update_one(
+        {"_id": task_to_update["_id"]},
+        {"$set": {"status": "✅"}}
+    )
     return True
 
 async def delete_task(number_of_task: int, user_id: int):
