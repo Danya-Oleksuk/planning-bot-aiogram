@@ -10,3 +10,4 @@ __pycache__
 *.manifest
 *.spec
 users_data_base.db
+__pycache__/

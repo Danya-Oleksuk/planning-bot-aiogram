@@ -44,6 +44,7 @@ admin_panel = ReplyKeyboardMarkup(
         [
             KeyboardButton(text="👥 Вывести пользователей"),
             KeyboardButton(text="📋 Вывести все коллекции"),
+            KeyboardButton(text="🪧 Создать пост рекламы"),
         ],
         [
             KeyboardButton(text="⬅️ Назад"),
@@ -75,5 +76,14 @@ def inline_builder(num: int, emoji: str, action: str):
     for x in range(num):
         builder.button(text=str(f"{emoji} {x + 1}"), callback_data=f"{action}_{x + 1}")
     builder.adjust(5)
+
+    return builder.as_markup()
+
+def get_post_confirm():
+    builder = InlineKeyboardBuilder()
+    builder.row(
+        InlineKeyboardButton(text="Отправить сейчас", callback_data="post_confirm"),
+        InlineKeyboardButton(text="Отменить", callback_data="post_cancel")
+    )
 
     return builder.as_markup()

@@ -7,6 +7,11 @@ from database import is_user_in_database
 class TaskForm(StatesGroup):
     task_name = State()
 
+class PostForm(StatesGroup):
+    text = State()
+    picture = State()
+    confirm = State()
+
 async def check_and_notify_registration(message) -> bool:
     if not is_user_in_database(telegram_id=message.from_user.id):
         await message.answer("Вы не зарегистрированы, нажмите /start!", reply_markup=ReplyKeyboardRemove())

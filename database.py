@@ -1,6 +1,8 @@
 import datetime
 import os
 import sqlite3
+from unittest.mock import DEFAULT
+
 import pymongo
 
 from dotenv import load_dotenv
@@ -20,11 +22,11 @@ def create_telegram_channel_db():
           username TEXT,
           is_vip BOOLEAN DEFAULT FALSE,
           vip_until TIMESTAMP defalut NULL,
+          is_banned BOOLEAN DEFAULT FALSE,
           joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
     conn.commit()
-    conn.close()
 
 def is_user_in_database(telegram_id: int):
     conn = sqlite3.connect('users_data_base.db')
@@ -50,6 +52,42 @@ def new_user_insert(user_id: int, first_name: str, last_name: str, username: str
     conn.commit()
     conn.close()
 
+def get_user_is_banned(user_id: int):
+    conn = sqlite3.connect('users_data_base.db')
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT is_banned FROM users WHERE telegram_id = ?', (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+
+    return result[0] == 1
+
+def user_blocked_bot(user_id: int):
+    conn = sqlite3.connect('users_data_base.db')
+    cursor = conn.cursor()
+
+    cursor.execute('UPDATE users SET is_banned = TRUE WHERE telegram_id = ?', (user_id,))
+    conn.commit()
+    cursor.close()
+
+def user_unblocked_bot(user_id: int):
+    conn = sqlite3.connect('users_data_base.db')
+    cursor = conn.cursor()
+
+    cursor.execute('UPDATE users SET is_banned = FALSE WHERE telegram_id = ?', (user_id,))
+    conn.commit()
+    cursor.close()
+
+def get_all_users_id():
+    db_name = 'users_data_base.db'
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT telegram_id FROM users')
+    data = cursor.fetchall()
+    conn.close()
+    return data
+
 def is_vip(user_id: int):
     db_name = 'users_data_base.db'
     conn = sqlite3.connect(db_name)
@@ -58,6 +96,7 @@ def is_vip(user_id: int):
     cursor.execute('SELECT is_vip FROM users WHERE telegram_id = ?', (user_id,))
     result = cursor.fetchone()
     conn.close()
+
     return result[0] == 1
 
 def get_all_users():

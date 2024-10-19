@@ -1,8 +1,8 @@
 from aiogram import Router, F
-from aiogram.enums import ParseMode
+from aiogram.enums import ParseMode, ChatMemberStatus
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
-from aiogram.filters import Command
+from aiogram.filters import Command, ChatMemberUpdatedFilter, KICKED, IS_NOT_MEMBER, IS_MEMBER
 from dotenv import load_dotenv
 import os
 
@@ -10,54 +10,13 @@ import os
 import markup
 from utils import TaskForm, check_and_notify_registration, check_and_notify_fsm_state
 from database import (is_user_in_database, new_user_insert,get_tasks, add_task, edit_task_status,
-                      delete_all_tasks, delete_task, count_tasks, get_all_tasks, get_all_users, is_vip)
+                      delete_all_tasks, delete_task, count_tasks, get_all_tasks, get_all_users, is_vip,
+                      user_blocked_bot, user_unblocked_bot)
 
 load_dotenv()
 
 admin_id = os.getenv('ADMIN_ID')
 router = Router()
-
-
-@router.message(F.text == '➡️ Админ панель')
-async def admin_panel(message: Message, state: FSMContext):
-    if not await check_and_notify_registration(message):
-        return
-    if not await check_and_notify_fsm_state(message, state):
-        return
-
-    if message.from_user.id == int(admin_id):
-        await message.answer("👨🏻‍💻 Админ панель активирована:", reply_markup=markup.admin_panel)
-    else:
-        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
-
-@router.message(F.text == '👥 Вывести пользователей')
-async def show_all_users(message: Message, state: FSMContext):
-    if not await check_and_notify_registration(message):
-        return
-
-    if not await check_and_notify_fsm_state(message, state):
-        return
-
-    if message.from_user.id == int(admin_id):
-        users = get_all_users()
-        users_data = [f"{i} - {x} - @{z} - {y}" for i, x, z, y in users]
-        await message.answer(text="\n".join(users_data))
-    else:
-        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
-
-@router.message(F.text == '📋 Вывести все коллекции')
-async def show_all_collections(message: Message, state: FSMContext):
-    if not await check_and_notify_registration(message):
-        return
-
-    if not await check_and_notify_fsm_state(message, state):
-        return
-
-    if message.from_user.id == int(admin_id):
-        collections = await get_all_tasks()
-        await message.answer(text=f"\n".join(collections))
-    else:
-        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
 
 @router.message(Command('start'))
 async def start(message: Message, state: FSMContext):
@@ -307,12 +266,10 @@ async def update_task_status(call: CallbackQuery):
     elif result is False:
         await call.answer("Что-то пошло не так!")
 
-@router.message()
-async def error(message: Message):
-    if not await check_and_notify_registration(message):
-        return
+@router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER))
+async def user_blocked_bot_(event: ChatMemberUpdatedFilter):
+    user_blocked_bot(user_id=event.from_user.id)
 
-    if message.from_user.id == int(admin_id):
-        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(True))
-    else:
-        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
+@router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_MEMBER))
+async def user_unblocked_bot_(event: ChatMemberUpdatedFilter):
+    user_unblocked_bot(user_id=event.from_user.id)
