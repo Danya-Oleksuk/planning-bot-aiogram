@@ -80,11 +80,13 @@ async def post_text(message: Message, state: FSMContext):
     await state.set_state(PostForm.picture)
 
 
-@router.message(PostForm.picture, F.photo)
+@router.message(PostForm.picture)
 async def post_picture(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
 
+    if not message.photo:
+        return
     await state.update_data(picture=message.photo[-1].file_id)
     data = await state.get_data()
     await state.set_state(PostForm.confirm)

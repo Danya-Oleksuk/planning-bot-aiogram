@@ -57,13 +57,13 @@ admin_panel = ReplyKeyboardMarkup(
 vip_menu = InlineKeyboardMarkup(
     inline_keyboard=[
         [
-            InlineKeyboardButton(text="7 дней за 100 ⭐️ / $1.99", callback_data='vip'),
+            InlineKeyboardButton(text="7 дней за 100 ⭐️ / $1.99", callback_data='vip_1_week_access'),
         ],
         [
-            InlineKeyboardButton(text="1 месяц за 200 ⭐️ / $3.99", callback_data='vip'),
+            InlineKeyboardButton(text="1 месяц за 200 ⭐️ / $3.99", callback_data='vip_1_month_access'),
         ],
         [
-            InlineKeyboardButton(text="1 год за 500 ⭐️ / $9.49", callback_data='vip')
+            InlineKeyboardButton(text="1 год за 500 ⭐️ / $9.49", callback_data='vip_1_year_access'),
         ],
     ],
 

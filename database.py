@@ -70,6 +70,13 @@ def user_blocked_bot(user_id: int):
     conn.commit()
     cursor.close()
 
+def set_vip(user_id: int, until: datetime.datetime):
+    conn = sqlite3.connect('users_data_base.db')
+    cursor = conn.cursor()
+    cursor.execute('UPDATE users SET is_vip = TRUE, vip_until = ? WHERE telegram_id = ?', (until, user_id))
+    conn.commit()
+    cursor.close()
+
 def user_unblocked_bot(user_id: int):
     conn = sqlite3.connect('users_data_base.db')
     cursor = conn.cursor()

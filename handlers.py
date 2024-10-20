@@ -1,17 +1,17 @@
 from aiogram import Router, F
 from aiogram.enums import ParseMode, ChatMemberStatus
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
+from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove, LabeledPrice, PreCheckoutQuery
 from aiogram.filters import Command, ChatMemberUpdatedFilter, KICKED, IS_NOT_MEMBER, IS_MEMBER
 from dotenv import load_dotenv
 import os
-
+import datetime
 
 import markup
-from utils import TaskForm, check_and_notify_registration, check_and_notify_fsm_state
+from utils import TaskForm, PaymentForm, check_and_notify_registration, check_and_notify_fsm_state
 from database import (is_user_in_database, new_user_insert,get_tasks, add_task, edit_task_status,
                       delete_all_tasks, delete_task, count_tasks, get_all_tasks, get_all_users, is_vip,
-                      user_blocked_bot, user_unblocked_bot)
+                      user_blocked_bot, user_unblocked_bot, set_vip)
 
 load_dotenv()
 
@@ -141,23 +141,6 @@ async def create_task(message: Message, state: FSMContext):
     else:
         await message.answer("✍️ К сожалению лимит исчерпан, /pay", reply_markup=markup.edit_menu)
 
-@router.message(Command('pay'))
-async def pay(message: Message, state: FSMContext):
-    if not await check_and_notify_registration(message):
-        return
-
-    if not await check_and_notify_fsm_state(message, state):
-        return
-
-    if message.from_user.id == int(admin_id):
-        await message.answer("👨🏻‍💻 Ты и так админ", reply_markup=markup.get_menu(True))
-    else:
-        await message.answer("<b>Приобретая премиум, вы открываете для себя расширенные возможности:</b>"
-                             "\n\n📌 <i>Отсутствие лимита задач</i>"
-                             "\n📌 <i>Отсутствие рекламы</i>"
-                             "\n📌 <i>Поддержка бота</i>"
-                             "\n\n<i>Выберите подходящий для вас срок подписки:</i>", parse_mode=ParseMode.HTML, reply_markup=markup.vip_menu)
-
 @router.message(F.text.in_(['❌ Удалить задачу', '/remove_task']))
 async def initiate_task_removal(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
@@ -207,6 +190,24 @@ async def back_1(message: Message, state: FSMContext):
         await message.answer('⚙️ Меню', reply_markup=markup.get_menu(True))
     else:
         await message.answer('⚙️ Меню', reply_markup=markup.get_menu(False))
+
+@router.message(Command('pay'))
+async def pay(message: Message, state: FSMContext):
+    if not await check_and_notify_registration(message):
+        return
+
+    if not await check_and_notify_fsm_state(message, state):
+        return
+
+    if message.from_user.id == int(admin_id):
+        await message.answer("👨🏻‍💻 Ты и так админ", reply_markup=markup.get_menu(True))
+    else:
+        await state.set_state(PaymentForm.payment)
+        await message.answer("<b>Приобретая премиум, вы открываете для себя расширенные возможности:</b>"
+                             "\n\n📌 <i>Отсутствие лимита задач</i>"
+                             "\n📌 <i>Отсутствие рекламы</i>"
+                             "\n📌 <i>Поддержка бота</i>"
+                             "\n\n<i>Выберите подходящий для вас срок подписки:</i>", parse_mode=ParseMode.HTML, reply_markup=markup.vip_menu)
 
 @router.message(TaskForm.task_name)
 async def task_name(message: Message, state: FSMContext):
@@ -265,6 +266,61 @@ async def update_task_status(call: CallbackQuery):
 
     elif result is False:
         await call.answer("Что-то пошло не так!")
+
+
+@router.callback_query(F.data == 'vip_1_week_access')
+async def vip_1_week_access_(call: CallbackQuery, state: FSMContext):
+
+    await state.set_state(PaymentForm.waiting_for_payment)
+    await call.message.answer_invoice(
+        title='Купить',
+        description='Приобрести Вип',
+        payload='vip_1_week_access',
+        currency='XTR',
+        prices=[LabeledPrice(label='XTR', amount=1)]
+    )
+
+@router.callback_query(F.data == 'vip_1_month_access')
+async def vip_1_month_access_(call: CallbackQuery, state: FSMContext):
+
+
+    await state.set_state(PaymentForm.waiting_for_payment)
+    await call.message.answer_invoice(
+        title='Купить',
+        description='Приобрести Вип',
+        payload='vip_1_week_access',
+        currency='XTR',
+        prices=[LabeledPrice(label='XTR', amount=200)]
+    )
+
+
+@router.callback_query(F.data == 'vip_1_year_access')
+async def vip_1_year_access_(call: CallbackQuery, state: FSMContext):
+
+    await state.set_state(PaymentForm.waiting_for_payment)
+    await call.message.answer_invoice(
+        title='Купить',
+        description='Приобрести Вип',
+        payload='vip_1_week_access',
+        currency='XTR',
+        prices=[LabeledPrice(label='XTR', amount=500)]
+    )
+
+
+@router.pre_checkout_query()
+async def process_pre_checkout_query(event: PreCheckoutQuery):
+    await event.answer(ok=True)
+
+@router.message(F.successful_payment)
+async def process_successful_payment(message: Message):
+    vip_until = datetime.datetime.now() + datetime.timedelta(days=30)
+
+    set_vip(user_id=message.from_user.id, until=vip_until)
+    await message.bot.refund_star_payment(
+        message.from_user.id,
+        message.successful_payment.telegram_payment_charge_id,)
+    await message.answer("✅✅✅ Спасибо за поддержку бота. Все услуги предоставлены")
+
 
 @router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER))
 async def user_blocked_bot_(event: ChatMemberUpdatedFilter):
