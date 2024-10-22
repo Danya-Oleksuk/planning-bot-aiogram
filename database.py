@@ -1,11 +1,10 @@
 import datetime
 import os
 import sqlite3
-from unittest.mock import DEFAULT
 
 import pymongo
-
 from dotenv import load_dotenv
+
 
 load_dotenv()
 
@@ -32,12 +31,12 @@ def is_user_in_database(telegram_id: int):
     conn = sqlite3.connect('users_data_base.db')
     cursor = conn.cursor()
 
-    cursor.execute('SELECT * FROM users WHERE telegram_id = ?', (telegram_id,))
-    result = cursor.fetchone()
+    cursor.execute('SELECT 1 FROM users WHERE telegram_id = ?', (telegram_id,))
+    user_exists = cursor.fetchone()
 
     conn.close()
 
-    return result is not None
+    return True if user_exists else False
 
 def new_user_insert(user_id: int, first_name: str, last_name: str, username: str, is_vip: bool = False):
     db_name = 'users_data_base.db'
@@ -50,6 +49,7 @@ def new_user_insert(user_id: int, first_name: str, last_name: str, username: str
         ''', (user_id, first_name, last_name, username, is_vip, datetime.datetime.now()))
 
     conn.commit()
+    cursor.close()
     conn.close()
 
 def get_user_is_banned(user_id: int):
@@ -74,8 +74,19 @@ def set_vip(user_id: int, until: datetime.datetime):
     conn = sqlite3.connect('users_data_base.db')
     cursor = conn.cursor()
     cursor.execute('UPDATE users SET is_vip = TRUE, vip_until = ? WHERE telegram_id = ?', (until, user_id))
+
     conn.commit()
     cursor.close()
+    conn.close()
+
+def set_vip_off(user_id: int):
+    conn = sqlite3.connect('users_data_base.db')
+    cursor = conn.cursor()
+
+    cursor.execute('UPDATE users SET is_vip = FALSE, vip_until = NULL WHERE telegram_id = ?', (user_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
 
 def user_unblocked_bot(user_id: int):
     conn = sqlite3.connect('users_data_base.db')
@@ -114,6 +125,36 @@ def get_all_users():
     cursor.execute('SELECT telegram_id, first_name, username, joined_at FROM users')
     result = cursor.fetchall()
     return result
+
+def get_vip_until(user_id: int):
+    db_name = 'users_data_base.db'
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT vip_until FROM users WHERE telegram_id = ?', (user_id,))
+    result = cursor.fetchone()
+    conn.close()
+
+    return result[0]
+
+def get_all_vip_users():
+    db_name = 'users_data_base.db'
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT telegram_id FROM users WHERE is_vip = TRUE')
+    result = cursor.fetchall()
+    return result
+
+def get_all_not_vip_users():
+    db_name = 'users_data_base.db'
+    conn = sqlite3.connect(db_name)
+    cursor = conn.cursor()
+
+    cursor.execute('SELECT telegram_id FROM users WHERE is_vip = FALSE')
+    result = cursor.fetchall()
+    return result
+
 
 db = None
 tasks_collection = None

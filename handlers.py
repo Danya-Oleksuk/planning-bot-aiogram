@@ -11,7 +11,7 @@ import markup
 from utils import TaskForm, PaymentForm, check_and_notify_registration, check_and_notify_fsm_state
 from database import (is_user_in_database, new_user_insert,get_tasks, add_task, edit_task_status,
                       delete_all_tasks, delete_task, count_tasks, get_all_tasks, get_all_users, is_vip,
-                      user_blocked_bot, user_unblocked_bot, set_vip)
+                      user_blocked_bot, user_unblocked_bot, set_vip, get_vip_until, set_vip_off)
 
 load_dotenv()
 
@@ -50,16 +50,19 @@ async def help(message: Message, state: FSMContext):
                 "/edit_plan — <i>редактирование плана</i>\n"
                 "/add_task — <i>добавить новую задачу</i>\n"
                 "/remove_task — <i>удалить некоторые задачи</i>\n"
-                "/clear_plan — <i>удалить все задачи</i>\n",
+                "/clear_plan — <i>удалить все задачи</i>\n"
+                "/pay - <i>Отключить все лимиты и поддержать бота</i>\n",
                              parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(True))
     else:
         await message.answer(
                 "<b>Информация по командам</b>\n\n"
                 "/plan — <i>показ текущего плана</i>\n"
-                "/edit_plan — <i>редактирование плана</i>\n"
+                "/edit_plan — <i>редактирование плана</i>\n"    
                 "/add_task — <i>добавить новую задачу</i>\n"
                 "/remove_task — <i>удалить некоторые задачи</i>\n"
-                "/clear_plan — <i>удалить все задачи</i>\n", parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(False))
+                "/clear_plan — <i>удалить все задачи</i>\n"
+                "/pay - <i>Отключить все лимиты и поддержать бота</i>\n",
+                            parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(False))
 
 @router.message(F.text.in_(['📋План', '/plan']))
 async def show_plan(message: Message, state: FSMContext):
@@ -135,9 +138,19 @@ async def create_task(message: Message, state: FSMContext):
     if await count_tasks(user_id=message.from_user.id) < 3:
         await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
         await state.set_state(TaskForm.task_name)
-    elif is_vip(user_id=message.from_user.id):
+    elif message.from_user.id == int(admin_id):
         await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
         await state.set_state(TaskForm.task_name)
+    elif is_vip(user_id=message.from_user.id):
+        is_still_vip = datetime.datetime.now() < datetime.datetime.strptime(get_vip_until(message.from_user.id),
+                                                                            "%Y-%m-%d %H:%M:%S.%f")
+
+        if is_still_vip:
+            await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
+            await state.set_state(TaskForm.task_name)
+        elif not is_still_vip:
+            set_vip_off(user_id=message.from_user.id)
+            await message.answer("✍️ К сожалению ваша подписка прошла, продлить - /pay", reply_markup=markup.edit_menu)
     else:
         await message.answer("✍️ К сожалению лимит исчерпан, /pay", reply_markup=markup.edit_menu)
 
@@ -202,12 +215,24 @@ async def pay(message: Message, state: FSMContext):
     if message.from_user.id == int(admin_id):
         await message.answer("👨🏻‍💻 Ты и так админ", reply_markup=markup.get_menu(True))
     else:
+
+        vip_until_date = get_vip_until(message.from_user.id)
+
         await state.set_state(PaymentForm.payment)
-        await message.answer("<b>Приобретая премиум, вы открываете для себя расширенные возможности:</b>"
-                             "\n\n📌 <i>Отсутствие лимита задач</i>"
-                             "\n📌 <i>Отсутствие рекламы</i>"
-                             "\n📌 <i>Поддержка бота</i>"
-                             "\n\n<i>Выберите подходящий для вас срок подписки:</i>", parse_mode=ParseMode.HTML, reply_markup=markup.vip_menu)
+        if vip_until_date is None:
+            await message.answer("<b>Приобретая премиум, вы открываете для себя расширенные возможности:</b>"
+                                 "\n\n📌 <i>Отсутствие лимита задач</i>"
+                                 "\n📌 <i>Отсутствие рекламы</i>"
+                                 "\n📌 <i>Поддержка бота</i>"
+                                 "\n\n<i>Выберите подходящий для вас срок подписки:</i>", parse_mode=ParseMode.HTML, reply_markup=markup.vip_menu)
+        else:
+            await message.answer(f"<b><u>Ваша подписка еще активна до {vip_until_date[:10]}\n\n</u></b>"
+                                 "<b>Приобретая премиум, вы открываете для себя расширенные возможности:</b>"
+                                 "\n\n📌 <i>Отсутствие лимита задач</i>"
+                                 "\n📌 <i>Отсутствие рекламы</i>"
+                                 "\n📌 <i>Поддержка бота</i>"
+                                 "\n\n<i>Выберите подходящий для вас срок подписки:</i>", parse_mode=ParseMode.HTML,
+                                 reply_markup=markup.vip_menu)
 
 @router.message(TaskForm.task_name)
 async def task_name(message: Message, state: FSMContext):
@@ -288,7 +313,7 @@ async def vip_1_month_access_(call: CallbackQuery, state: FSMContext):
     await call.message.answer_invoice(
         title='Купить',
         description='Приобрести Вип',
-        payload='vip_1_week_access',
+        payload='vip_1_month_access',
         currency='XTR',
         prices=[LabeledPrice(label='XTR', amount=200)]
     )
@@ -301,25 +326,34 @@ async def vip_1_year_access_(call: CallbackQuery, state: FSMContext):
     await call.message.answer_invoice(
         title='Купить',
         description='Приобрести Вип',
-        payload='vip_1_week_access',
+        payload='vip_1_year_access',
         currency='XTR',
         prices=[LabeledPrice(label='XTR', amount=500)]
     )
 
 
 @router.pre_checkout_query()
-async def process_pre_checkout_query(event: PreCheckoutQuery):
+async def process_pre_checkout_query(event: PreCheckoutQuery, state: FSMContext):
     await event.answer(ok=True)
+    await state.clear()
 
 @router.message(F.successful_payment)
 async def process_successful_payment(message: Message):
-    vip_until = datetime.datetime.now() + datetime.timedelta(days=30)
+    payload = message.successful_payment.invoice_payload
+
+    if payload == 'vip_1_week_access':
+        vip_until = datetime.datetime.now() + datetime.timedelta(days=7)
+    elif payload == 'vip_1_month_access':
+        vip_until = datetime.datetime.now() + datetime.timedelta(days=30)
+    elif payload == 'vip_1_year_access':
+        vip_until = datetime.datetime.now() + datetime.timedelta(days=365)
+    else:
+        return
 
     set_vip(user_id=message.from_user.id, until=vip_until)
-    await message.bot.refund_star_payment(
-        message.from_user.id,
-        message.successful_payment.telegram_payment_charge_id,)
-    await message.answer("✅✅✅ Спасибо за поддержку бота. Все услуги предоставлены")
+    await message.bot.refund_star_payment(message.from_user.id, message.successful_payment.telegram_payment_charge_id)
+    await message.answer("🥳 Спасибо за поддержку бота. Все услуги предоставлены",
+                         reply_markup=markup.get_menu(False))
 
 
 @router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER))

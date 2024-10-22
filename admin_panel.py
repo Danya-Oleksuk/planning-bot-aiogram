@@ -10,8 +10,9 @@ import markup
 from utils import  check_and_notify_registration, check_and_notify_fsm_state, PostForm
 from handlers import admin_id
 from database import (is_user_in_database, new_user_insert,get_tasks, add_task,
-                      edit_task_status,delete_all_tasks, delete_task, count_tasks, get_all_tasks,
-                      get_all_users, get_all_users_id, is_vip, get_user_is_banned)
+                      edit_task_status, delete_all_tasks, delete_task, count_tasks, get_all_tasks,
+                      get_all_users, get_all_users_id, is_vip,
+                      get_user_is_banned, get_all_vip_users,get_all_not_vip_users)
 
 router = Router()
 
@@ -67,6 +68,34 @@ async def create_post_advertisement(message: Message, state: FSMContext):
     if message.from_user.id == int(admin_id):
         await message.answer("📖 Введите текст поста:", parse_mode=ParseMode.MARKDOWN, reply_markup=ReplyKeyboardRemove())
         await state.set_state(PostForm.text)
+    else:
+        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
+
+@router.message(F.text == 'ℹ️ Вывести кол. vip пользователей')
+async def create_post_advertisement(message: Message, state: FSMContext):
+    if not await check_and_notify_registration(message):
+        return
+
+    if not await check_and_notify_fsm_state(message, state):
+        return
+
+    if message.from_user.id == int(admin_id):
+        vip_users = get_all_vip_users()
+        await message.answer(f"{len(vip_users)} vip пользователей", parse_mode=ParseMode.MARKDOWN)
+    else:
+        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
+
+@router.message(F.text == 'ℹ️ Вывести кол. не vip пользователей')
+async def create_post_advertisement(message: Message, state: FSMContext):
+    if not await check_and_notify_registration(message):
+        return
+
+    if not await check_and_notify_fsm_state(message, state):
+        return
+
+    if message.from_user.id == int(admin_id):
+        not_vip_users = get_all_not_vip_users()
+        await message.answer(f"{len(not_vip_users)} не vip пользователей", parse_mode=ParseMode.MARKDOWN)
     else:
         await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
 

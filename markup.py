@@ -47,6 +47,10 @@ admin_panel = ReplyKeyboardMarkup(
             KeyboardButton(text="🪧 Создать пост рекламы"),
         ],
         [
+            KeyboardButton(text="ℹ️ Вывести кол. vip пользователей"),
+            KeyboardButton(text="ℹ️ Вывести кол. не vip пользователей"),
+        ],
+        [
             KeyboardButton(text="⬅️ Назад"),
         ],
     ],
