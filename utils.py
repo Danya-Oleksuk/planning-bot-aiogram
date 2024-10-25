@@ -33,4 +33,3 @@ async def check_and_notify_fsm_state(message, state) -> bool:
         await message.answer("❗️Команда не может быть выполнена, вы находитесь в процессе ввода")
         return False
     return True
-
