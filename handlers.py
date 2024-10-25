@@ -9,16 +9,17 @@ import datetime
 
 import markup
 from utils import TaskForm, PaymentForm, check_and_notify_registration, check_and_notify_fsm_state
-from database import (is_user_in_database, new_user_insert,get_tasks, add_task, edit_task_status,
+from database import (is_user_in_database, new_user_insert, get_tasks, add_task, edit_task_status,
                       delete_all_tasks, delete_task, count_tasks, get_all_tasks, get_all_users, is_vip,
                       user_blocked_bot, user_unblocked_bot, set_vip, get_vip_until, set_vip_off)
 
 load_dotenv()
 
 admin_id = os.getenv('ADMIN_ID')
-router = Router()
+router_1 = Router()
+router_2 = Router()
 
-@router.message(Command('start'))
+@router_1.message(Command('start'))
 async def start(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
@@ -37,7 +38,7 @@ async def start(message: Message, state: FSMContext):
         await message.answer("👋 Привет, вы зарегистрировались, удачи в планировании!",
                              reply_markup=markup.get_menu(True if message.from_user.id == int(admin_id) else False))
 
-@router.message(F.text.in_(['ℹ️Помощь по командам', '/help', '/info']))
+@router_1.message(F.text.in_(['ℹ️Помощь по командам', '/help', '/info']))
 async def help(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
@@ -64,7 +65,7 @@ async def help(message: Message, state: FSMContext):
                 "/pay - <i>Отключить все лимиты и поддержать бота</i>\n",
                             parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(False))
 
-@router.message(F.text.in_(['📋План', '/plan']))
+@router_1.message(F.text.in_(['📋План', '/plan']))
 async def show_plan(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
@@ -100,7 +101,7 @@ async def show_plan(message: Message, state: FSMContext):
                 parse_mode=ParseMode.HTML
             )
 
-@router.message(F.text.in_(['🧹 Очистить весь план', '/clear_plan']))
+@router_2.message(F.text.in_(['🧹 Очистить весь план', '/clear_plan']))
 async def clear_plan(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
@@ -117,7 +118,7 @@ async def clear_plan(message: Message, state: FSMContext):
     else:
         await message.answer(f"❗️План и так пуст", reply_markup=markup.edit_menu)
 
-@router.message(F.text.in_(['📝Редактировать план', '/edit_plan']))
+@router_2.message(F.text.in_(['📝Редактировать план', '/edit_plan']))
 async def edit_plan(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
@@ -127,7 +128,7 @@ async def edit_plan(message: Message, state: FSMContext):
 
     await message.answer("🖋 Меню редактирования: ", reply_markup=markup.edit_menu)
 
-@router.message(F.text.in_(['➕ Добавить задачу', '/add_task']))
+@router_1.message(F.text.in_(['➕ Добавить задачу', '/add_task']))
 async def create_task(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
@@ -154,7 +155,7 @@ async def create_task(message: Message, state: FSMContext):
     else:
         await message.answer("✍️ К сожалению лимит исчерпан, /pay", reply_markup=markup.edit_menu)
 
-@router.message(F.text.in_(['❌ Удалить задачу', '/remove_task']))
+@router_2.message(F.text.in_(['❌ Удалить задачу', '/remove_task']))
 async def initiate_task_removal(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
@@ -174,7 +175,7 @@ async def initiate_task_removal(message: Message, state: FSMContext):
                              reply_markup=markup.inline_builder(num=await count_tasks(user_id=message.from_user.id),
                                                                 emoji="🗑", action="delete"))
 
-@router.message(F.text.in_(['✔️ Изменить статус задачи', '/edit_task_status']))
+@router_2.message(F.text.in_(['✔️ Изменить статус задачи', '/edit_task_status']))
 async def edit_task_status_(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
@@ -192,7 +193,7 @@ async def edit_task_status_(message: Message, state: FSMContext):
                              reply_markup=markup.inline_builder(num=await count_tasks(user_id=message.from_user.id),
                                                                 emoji="✅", action="update"))
 
-@router.message(F.text.in_(['⬅️ Назад', ]))
+@router_2.message(F.text.in_(['⬅️ Назад', ]))
 async def back_1(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
@@ -204,7 +205,7 @@ async def back_1(message: Message, state: FSMContext):
     else:
         await message.answer('⚙️ Меню', reply_markup=markup.get_menu(False))
 
-@router.message(Command('pay'))
+@router_2.message(Command('pay'))
 async def pay(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
@@ -234,7 +235,7 @@ async def pay(message: Message, state: FSMContext):
                                  "\n\n<i>Выберите подходящий для вас срок подписки:</i>", parse_mode=ParseMode.HTML,
                                  reply_markup=markup.vip_menu)
 
-@router.message(TaskForm.task_name)
+@router_1.message(TaskForm.task_name)
 async def task_name(message: Message, state: FSMContext):
     if len(message.text) > 50:
         await message.answer("❗️Название задачи не должно быть больше 50 символов\n\n✍️  Введите название задачи:")
@@ -243,7 +244,7 @@ async def task_name(message: Message, state: FSMContext):
     await state.clear()
     await message.answer('✅ Задача была добавлена', reply_markup=markup.edit_menu)
 
-@router.callback_query(F.data.startswith('delete_'))
+@router_1.callback_query(F.data.startswith('delete_'))
 async def confirm_task_removal(call: CallbackQuery):
     task_num = int(call.data.split('_')[1])
     result = await delete_task(number_of_task=task_num, user_id=call.from_user.id)
@@ -265,7 +266,7 @@ async def confirm_task_removal(call: CallbackQuery):
     elif result is False:
         await call.answer("Что то пошло не так!")
 
-@router.callback_query(F.data.startswith('update_'))
+@router_1.callback_query(F.data.startswith('update_'))
 async def update_task_status(call: CallbackQuery):
     task_num = int(call.data.split('_')[1])
     result = await edit_task_status(user_id=call.from_user.id, task_number=task_num)
@@ -293,7 +294,7 @@ async def update_task_status(call: CallbackQuery):
         await call.answer("Что-то пошло не так!")
 
 
-@router.callback_query(F.data == 'vip_1_week_access')
+@router_1.callback_query(F.data == 'vip_1_week_access')
 async def vip_1_week_access_(call: CallbackQuery, state: FSMContext):
 
     await state.set_state(PaymentForm.waiting_for_payment)
@@ -305,7 +306,7 @@ async def vip_1_week_access_(call: CallbackQuery, state: FSMContext):
         prices=[LabeledPrice(label='XTR', amount=1)]
     )
 
-@router.callback_query(F.data == 'vip_1_month_access')
+@router_1.callback_query(F.data == 'vip_1_month_access')
 async def vip_1_month_access_(call: CallbackQuery, state: FSMContext):
 
 
@@ -319,7 +320,7 @@ async def vip_1_month_access_(call: CallbackQuery, state: FSMContext):
     )
 
 
-@router.callback_query(F.data == 'vip_1_year_access')
+@router_1.callback_query(F.data == 'vip_1_year_access')
 async def vip_1_year_access_(call: CallbackQuery, state: FSMContext):
 
     await state.set_state(PaymentForm.waiting_for_payment)
@@ -332,12 +333,12 @@ async def vip_1_year_access_(call: CallbackQuery, state: FSMContext):
     )
 
 
-@router.pre_checkout_query()
+@router_1.pre_checkout_query()
 async def process_pre_checkout_query(event: PreCheckoutQuery, state: FSMContext):
     await event.answer(ok=True)
     await state.clear()
 
-@router.message(F.successful_payment)
+@router_1.message(F.successful_payment)
 async def process_successful_payment(message: Message):
     payload = message.successful_payment.invoice_payload
 
@@ -356,10 +357,10 @@ async def process_successful_payment(message: Message):
                          reply_markup=markup.get_menu(False))
 
 
-@router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER))
+@router_1.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER))
 async def user_blocked_bot_(event: ChatMemberUpdatedFilter):
     user_blocked_bot(user_id=event.from_user.id)
 
-@router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_MEMBER))
+@router_1.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_MEMBER))
 async def user_unblocked_bot_(event: ChatMemberUpdatedFilter):
     user_unblocked_bot(user_id=event.from_user.id)

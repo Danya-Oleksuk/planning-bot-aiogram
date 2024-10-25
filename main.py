@@ -8,6 +8,7 @@ import handlers
 import admin_panel
 import database
 
+from middlewares import AntiSpamMiddleware
 
 load_dotenv()
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
@@ -20,7 +21,12 @@ async def main():
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
 
-    dp.include_routers(handlers.router, admin_panel.router,)
+    handlers.router_1.message.middleware(AntiSpamMiddleware(cache_ttl=0.5))
+    handlers.router_2.message.middleware(AntiSpamMiddleware(cache_ttl=0.2))
+
+    dp.include_routers(handlers.router_1,
+                       handlers.router_2,
+                       admin_panel.router,)
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
