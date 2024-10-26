@@ -90,6 +90,27 @@ async def show_plan(message: Message, state: FSMContext):
                 reply_markup=markup.get_menu(True),
                 parse_mode=ParseMode.HTML
             )
+        elif is_vip(user_id=message.from_user.id):
+            completed_tasks = []
+            not_completed_tasks = []
+
+            for x in tasks:
+                if list(x.values())[0] == '✅':
+                    completed_tasks.append(x)
+                else:
+                    not_completed_tasks.append(x)
+
+            if not completed_tasks:
+                answer = "🗂 <b>Твой план:</b>\n\n" + "\n".join(
+                    [f"{i + 1}. {list(task.keys())[0]} - {list(task.values())[0]}" for i, task in
+                     enumerate(not_completed_tasks)])
+            else:
+                answer = "🗂 <b>Твой план:</b>\n\n" + "\n".join(
+                    [f"{i + 1}. {list(task.keys())[0]} - {list(task.values())[0]}" for i, task in
+                     enumerate(not_completed_tasks)]) + "\n————————\n\n" + '\n'.join(
+                    [f"{i + 1}. <s>{list(task.keys())[0]}</s> - {list(task.values())[0]}" for i, task in
+                     enumerate(completed_tasks)])
+            await message.answer(text=answer, reply_markup=markup.get_menu(False), parse_mode=ParseMode.HTML)
         else:
             await message.answer(
                 "🗂 <b>Твой план:</b>\n\n" +
@@ -223,6 +244,7 @@ async def pay(message: Message, state: FSMContext):
         if vip_until_date is None:
             await message.answer("<b>Приобретая премиум, вы открываете для себя расширенные возможности:</b>"
                                  "\n\n📌 <i>Отсутствие лимита задач</i>"
+                                 "\n📌<i> Сортировка задач по выполнению</i>"
                                  "\n📌 <i>Отсутствие рекламы</i>"
                                  "\n📌 <i>Поддержка бота</i>"
                                  "\n\n<i>Выберите подходящий для вас срок подписки:</i>", parse_mode=ParseMode.HTML, reply_markup=markup.vip_menu)
@@ -230,6 +252,7 @@ async def pay(message: Message, state: FSMContext):
             await message.answer(f"<b><u>Ваша подписка еще активна до {vip_until_date[:10]}\n\n</u></b>"
                                  "<b>Приобретая премиум, вы открываете для себя расширенные возможности:</b>"
                                  "\n\n📌 <i>Отсутствие лимита задач</i>"
+                                 "\n📌 <i>Сортировка задач по выполнению</i>"
                                  "\n📌 <i>Отсутствие рекламы</i>"
                                  "\n📌 <i>Поддержка бота</i>"
                                  "\n\n<i>Выберите подходящий для вас срок подписки:</i>", parse_mode=ParseMode.HTML,
@@ -299,11 +322,15 @@ async def vip_1_week_access_(call: CallbackQuery, state: FSMContext):
 
     await state.set_state(PaymentForm.waiting_for_payment)
     await call.message.answer_invoice(
-        title='Купить',
-        description='Приобрести Вип',
+        title='Покупка премиума',
+        description="Приобретая премиум, вы открываете для себя расширенные возможности:"
+                                 "\n\n📌 Отсутствие лимита задач"
+                                 "\n📌 Сортировка задач по выполнению"
+                                 "\n📌 Отсутствие рекламы"
+                                 "\n📌 Поддержка бота",
         payload='vip_1_week_access',
         currency='XTR',
-        prices=[LabeledPrice(label='XTR', amount=1)]
+        prices=[LabeledPrice(label='XTR', amount=100)]
     )
 
 @router_1.callback_query(F.data == 'vip_1_month_access')
@@ -312,8 +339,12 @@ async def vip_1_month_access_(call: CallbackQuery, state: FSMContext):
 
     await state.set_state(PaymentForm.waiting_for_payment)
     await call.message.answer_invoice(
-        title='Купить',
-        description='Приобрести Вип',
+        title='Покупка премиума',
+        description="Приобретая премиум, вы открываете для себя расширенные возможности:"
+                                 "\n\n📌 Отсутствие лимита задач"
+                                 "\n📌 Сортировка задач по выполнению"
+                                 "\n📌 Отсутствие рекламы"
+                                 "\n📌 Поддержка бота",
         payload='vip_1_month_access',
         currency='XTR',
         prices=[LabeledPrice(label='XTR', amount=200)]
@@ -325,8 +356,12 @@ async def vip_1_year_access_(call: CallbackQuery, state: FSMContext):
 
     await state.set_state(PaymentForm.waiting_for_payment)
     await call.message.answer_invoice(
-        title='Купить',
-        description='Приобрести Вип',
+        title='Покупка премиума',
+        description="Приобретая премиум, вы открываете для себя расширенные возможности:"
+                                 "\n\n📌 Отсутствие лимита задач"
+                                 "\n📌 Сортировка задач по выполнению"
+                                 "\n📌 Отсутствие рекламы"
+                                 "\n📌 Поддержка бота",
         payload='vip_1_year_access',
         currency='XTR',
         prices=[LabeledPrice(label='XTR', amount=500)]
@@ -352,8 +387,10 @@ async def process_successful_payment(message: Message):
         return
 
     set_vip(user_id=message.from_user.id, until=vip_until)
-    await message.bot.refund_star_payment(message.from_user.id, message.successful_payment.telegram_payment_charge_id)
-    await message.answer("🥳 Спасибо за поддержку бота. Все услуги предоставлены",
+    vip_until_date = get_vip_until(message.from_user.id)
+    await message.answer("🥳 Спасибо за поддержку бота. Все услуги предоставлены!"
+                         f"\n\n<b><u>Ваша подписка теперь активна до {vip_until_date[:10]}</u></b>",
+                         parse_mode=ParseMode.HTML,
                          reply_markup=markup.get_menu(False))
 
 
