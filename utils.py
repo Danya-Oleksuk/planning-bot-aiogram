@@ -1,5 +1,4 @@
-from token import AWAIT
-
+from aiogram import BaseMiddleware
 from aiogram.fsm.state import StatesGroup, State
 from aiogram.types import ReplyKeyboardRemove, CallbackQuery
 
@@ -18,7 +17,6 @@ class PaymentForm(StatesGroup):
     payment = State()
     waiting_for_payment= State()
 
-
 async def check_and_notify_registration(message) -> bool:
     if not is_user_in_database(telegram_id=message.from_user.id):
         await message.answer("Вы не зарегистрированы, нажмите /start!", reply_markup=ReplyKeyboardRemove())
@@ -35,3 +33,4 @@ async def check_and_notify_fsm_state(message, state) -> bool:
         await message.answer("❗️Команда не может быть выполнена, вы находитесь в процессе ввода")
         return False
     return True
+

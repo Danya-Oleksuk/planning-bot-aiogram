@@ -9,7 +9,7 @@ import datetime
 
 import markup
 from utils import TaskForm, PaymentForm, check_and_notify_registration, check_and_notify_fsm_state
-from database import (is_user_in_database, new_user_insert,get_tasks, add_task, edit_task_status,
+from database import (is_user_in_database, new_user_insert, get_tasks, add_task, edit_task_status,
                       delete_all_tasks, delete_task, count_tasks, get_all_tasks, get_all_users, is_vip,
                       user_blocked_bot, user_unblocked_bot, set_vip, get_vip_until, set_vip_off)
 
