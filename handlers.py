@@ -80,19 +80,10 @@ async def show_plan(message: Message, state: FSMContext):
         else:
             await message.answer("❗️Ваш план на сегодня пуст!", reply_markup=markup.get_menu(False))
     else:
-        if message.from_user.id == int(admin_id):
-            await message.answer(
-                "🗂 <b>Твой план:</b>\n\n" +
-                "\n".join(
-                    [f"{i + 1}. {list(task.keys())[0]} — {list(task.values())[0]}" for
-                     i, task in
-                     enumerate(tasks)]),
-                reply_markup=markup.get_menu(True),
-                parse_mode=ParseMode.HTML
-            )
-        elif is_vip(user_id=message.from_user.id):
+        if is_vip(user_id=message.from_user.id) or message.from_user.id == int(admin_id):
             completed_tasks = []
             not_completed_tasks = []
+            status = True if message.from_user.id == int(admin_id) else False
 
             for x in tasks:
                 if list(x.values())[0] == '✅':
@@ -110,7 +101,7 @@ async def show_plan(message: Message, state: FSMContext):
                      enumerate(not_completed_tasks)]) + "\n————————\n\n" + '\n'.join(
                     [f"{i + 1}. <s>{list(task.keys())[0]}</s> - {list(task.values())[0]}" for i, task in
                      enumerate(completed_tasks)])
-            await message.answer(text=answer, reply_markup=markup.get_menu(False), parse_mode=ParseMode.HTML)
+            await message.answer(text=answer, reply_markup=markup.get_menu(status), parse_mode=ParseMode.HTML)
         else:
             await message.answer(
                 "🗂 <b>Твой план:</b>\n\n" +
@@ -330,7 +321,7 @@ async def vip_1_week_access_(call: CallbackQuery, state: FSMContext):
                                  "\n📌 Поддержка бота",
         payload='vip_1_week_access',
         currency='XTR',
-        prices=[LabeledPrice(label='XTR', amount=100)]
+        prices=[LabeledPrice(label='XTR', amount=1)]
     )
 
 @router_1.callback_query(F.data == 'vip_1_month_access')
@@ -378,7 +369,7 @@ async def process_successful_payment(message: Message):
     payload = message.successful_payment.invoice_payload
 
     if payload == 'vip_1_week_access':
-        vip_until = datetime.datetime.now() + datetime.timedelta(days=7)
+        vip_until = datetime.datetime.now() + datetime.timedelta(seconds=20)
     elif payload == 'vip_1_month_access':
         vip_until = datetime.datetime.now() + datetime.timedelta(days=30)
     elif payload == 'vip_1_year_access':
