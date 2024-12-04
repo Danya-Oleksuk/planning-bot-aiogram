@@ -80,6 +80,12 @@ async def show_plan(message: Message, state: FSMContext):
         else:
             await message.answer("❗️Ваш план на сегодня пуст!", reply_markup=markup.get_menu(False))
     else:
+        if is_vip(user_id=message.from_user.id):
+            is_still_vip = datetime.datetime.now() < datetime.datetime.strptime(get_vip_until(message.from_user.id),
+                                                                                "%Y-%m-%d %H:%M:%S.%f")
+            if not is_still_vip:
+                set_vip_off(user_id=message.from_user.id)
+
         if is_vip(user_id=message.from_user.id) or message.from_user.id == int(admin_id):
             completed_tasks = []
             not_completed_tasks = []
@@ -228,10 +234,15 @@ async def pay(message: Message, state: FSMContext):
     if message.from_user.id == int(admin_id):
         await message.answer("👨🏻‍💻 Ты и так админ", reply_markup=markup.get_menu(True))
     else:
+        if is_vip(user_id=message.from_user.id):
+            is_still_vip = datetime.datetime.now() < datetime.datetime.strptime(get_vip_until(message.from_user.id),
+                                                                                "%Y-%m-%d %H:%M:%S.%f")
+            if not is_still_vip:
+                set_vip_off(user_id=message.from_user.id)
 
         vip_until_date = get_vip_until(message.from_user.id)
-
         await state.set_state(PaymentForm.payment)
+
         if vip_until_date is None:
             await message.answer("<b>Приобретая премиум, вы открываете для себя расширенные возможности:</b>"
                                  "\n\n📌 <i>Отсутствие лимита задач</i>"
