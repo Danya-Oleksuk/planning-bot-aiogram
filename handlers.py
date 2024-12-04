@@ -262,9 +262,12 @@ async def pay(message: Message, state: FSMContext):
 
 @router_1.message(TaskForm.task_name)
 async def task_name(message: Message, state: FSMContext):
-    if len(message.text) > 50:
+    if not message.text:
+        return
+    elif len(message.text) > 50:
         await message.answer("❗️Название задачи не должно быть больше 50 символов\n\n✍️  Введите название задачи:")
         return
+
     await add_task(user_id=message.from_user.id, task_description=message.text)
     await state.clear()
     await message.answer('✅ Задача была добавлена', reply_markup=markup.edit_menu)
