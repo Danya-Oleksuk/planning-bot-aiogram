@@ -80,7 +80,7 @@ async def show_plan(message: Message, state: FSMContext):
         else:
             await message.answer("❗️Ваш план на сегодня пуст!", reply_markup=markup.get_menu(False))
     else:
-        if is_vip(user_id=message.from_user.id):
+        if is_vip(user_id=message.from_user.id) and not message.from_user.id == int(admin_id):
             is_still_vip = datetime.datetime.now() < datetime.datetime.strptime(get_vip_until(message.from_user.id),
                                                                                 "%Y-%m-%d %H:%M:%S.%f")
             if not is_still_vip:
