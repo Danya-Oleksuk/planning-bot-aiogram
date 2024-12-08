@@ -1,3 +1,5 @@
+from zipimport import alt_path_sep
+
 from aiogram import Router, F, Bot
 from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
@@ -5,14 +7,15 @@ from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
 from aiogram.filters import Command
 from dotenv import load_dotenv
 import os
+import datetime
 
 import markup
-from utils import  check_and_notify_registration, check_and_notify_fsm_state, PostForm
+from utils import  check_and_notify_registration, check_and_notify_fsm_state, PostForm, VipForm
 from handlers import admin_id
 from database import (is_user_in_database, new_user_insert,get_tasks, add_task,
                       edit_task_status, delete_all_tasks, delete_task, count_tasks, get_all_tasks,
                       get_all_users, get_all_users_id, is_vip,
-                      get_user_is_banned, get_all_vip_users, get_all_not_vip_users)
+                      get_user_is_banned, get_all_vip_users, get_all_not_vip_users, set_vip)
 
 router = Router()
 
@@ -98,6 +101,67 @@ async def create_post_advertisement(message: Message, state: FSMContext):
         await message.answer(f"{len(not_vip_users)} не vip пользователей", parse_mode=ParseMode.MARKDOWN)
     else:
         await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
+
+@router.message(F.text == '🎁 Подарить вип пользователю')
+async def gift_the_vip(message: Message, state: FSMContext):
+    if not await check_and_notify_registration(message):
+        return
+
+    if not await check_and_notify_fsm_state(message, state):
+        return
+
+    if message.from_user.id == int(admin_id):
+        await message.answer("🆔 Введите id пользователя:", parse_mode=ParseMode.MARKDOWN,
+                             reply_markup=ReplyKeyboardRemove())
+        await state.set_state(VipForm.user_name)
+    else:
+        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
+
+
+@router.message(VipForm.user_name, F.text)
+async def post_text(message: Message, state: FSMContext):
+    if not await check_and_notify_registration(message):
+        return
+
+    await state.update_data(user_name=message.md_text)
+    await message.answer("✔️ Юзер добавлен\n\n📅 Введите дату vip статуса (1w/1m/1y):")
+    await state.set_state(VipForm.date)
+
+@router.message(VipForm.date, F.text)
+async def post_text(message: Message, state: FSMContext):
+    if not await check_and_notify_registration(message):
+        return
+
+    await state.update_data(until_date=message.md_text)
+    data = await state.get_data()
+
+    if not is_user_in_database(telegram_id=data['user_name']):
+        await message.answer(f"⚠️ Был введен <b>не правильный id</b>", parse_mode=ParseMode.HTML,
+                             reply_markup=markup.get_menu(True))
+        await state.clear()
+        return
+    try:
+        if data['until_date'] in ('1w', '1m', '1y'):
+            until_date = None
+
+            if data['until_date'] == '1w':
+                until_date = datetime.datetime.now() + datetime.timedelta(days=7)
+            elif data['until_date'] == '1m':
+                until_date = datetime.datetime.now() + datetime.timedelta(days=30)
+            elif data['until_date'] == '1y':
+                until_date = datetime.datetime.now() + datetime.timedelta(days=365)
+
+            set_vip(user_id=data['user_name'], until=until_date)
+            await message.answer(f'🥳 Vip статус успешно подарен', reply_markup=markup.get_menu(True))
+        else:
+            await message.answer(f'⚠️ <b>Дата</b> введена не правильно', parse_mode=ParseMode.HTML,
+                                 reply_markup=markup.get_menu(True))
+    except Exception as ex:
+        await message.answer(f'⚠️ <b>Не получилось подарить vip, ошибка</b> - {ex}', parse_mode=ParseMode.HTML,
+                             reply_markup=markup.get_menu(True))
+    finally:
+        await state.clear()
+
 
 @router.message(PostForm.text, F.text)
 async def post_text(message: Message, state: FSMContext):

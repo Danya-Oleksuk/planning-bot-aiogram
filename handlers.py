@@ -383,7 +383,7 @@ async def process_successful_payment(message: Message):
     payload = message.successful_payment.invoice_payload
 
     if payload == 'vip_1_week_access':
-        vip_until = datetime.datetime.now() + datetime.timedelta(seconds=20)
+        vip_until = datetime.datetime.now() + datetime.timedelta(seconds=20) # !!! TEST
     elif payload == 'vip_1_month_access':
         vip_until = datetime.datetime.now() + datetime.timedelta(days=30)
     elif payload == 'vip_1_year_access':

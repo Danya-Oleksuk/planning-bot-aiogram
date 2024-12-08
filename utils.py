@@ -17,6 +17,10 @@ class PaymentForm(StatesGroup):
     payment = State()
     waiting_for_payment= State()
 
+class VipForm(StatesGroup):
+    user_name = State()
+    date= State()
+
 async def check_and_notify_registration(message) -> bool:
     if not is_user_in_database(telegram_id=message.from_user.id):
         await message.answer("Вы не зарегистрированы, нажмите /start!", reply_markup=ReplyKeyboardRemove())

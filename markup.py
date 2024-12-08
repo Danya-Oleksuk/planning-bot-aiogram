@@ -51,6 +51,9 @@ admin_panel = ReplyKeyboardMarkup(
             KeyboardButton(text="ℹ️ Вывести кол. не vip пользователей"),
         ],
         [
+          KeyboardButton(text="🎁 Подарить вип пользователю")
+        ],
+        [
             KeyboardButton(text="⬅️ Назад"),
         ],
     ],
