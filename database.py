@@ -9,151 +9,124 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def create_telegram_channel_db():
-    conn = sqlite3.connect('users_data_base.db')
-    cursor = conn.cursor()
+    with sqlite3.connect('users_data_base.db') as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          telegram_id INTEGER UNIQUE,
-          first_name TEXT,
-          last_name TEXT,
-          username TEXT,
-          is_vip BOOLEAN DEFAULT FALSE,
-          vip_until TIMESTAMP defalut NULL,
-          is_banned BOOLEAN DEFAULT FALSE,
-          joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    ''')
-    conn.commit()
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS users (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              telegram_id INTEGER UNIQUE,
+              first_name TEXT,
+              last_name TEXT,
+              username TEXT,
+              is_vip BOOLEAN DEFAULT FALSE,
+              vip_until TIMESTAMP defalut NULL,
+              is_banned BOOLEAN DEFAULT FALSE,
+              joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        conn.commit()
 
 def is_user_in_database(telegram_id: int):
-    conn = sqlite3.connect('users_data_base.db')
-    cursor = conn.cursor()
+    with sqlite3.connect('users_data_base.db') as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('SELECT 1 FROM users WHERE telegram_id = ?', (telegram_id,))
-    user_exists = cursor.fetchone()
+        cursor.execute('SELECT 1 FROM users WHERE telegram_id = ?', (telegram_id,))
+        user_exists = cursor.fetchone()
 
-    conn.close()
-
-    return True if user_exists else False
+        return True if user_exists else False
 
 def new_user_insert(user_id: int, first_name: str, last_name: str, username: str, is_vip: bool = False):
-    db_name = 'users_data_base.db'
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
+    with sqlite3.connect('users_data_base.db') as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('''
-            INSERT INTO users (telegram_id, first_name, last_name, username, is_vip, joined_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (user_id, first_name, last_name, username, is_vip, datetime.datetime.now()))
+        cursor.execute('''
+                INSERT INTO users (telegram_id, first_name, last_name, username, is_vip, joined_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (user_id, first_name, last_name, username, is_vip, datetime.datetime.now()))
 
-    conn.commit()
-    cursor.close()
-    conn.close()
+        conn.commit()
 
 def get_user_is_banned(user_id: int):
-    conn = sqlite3.connect('users_data_base.db')
-    cursor = conn.cursor()
+    with sqlite3.connect('users_data_base.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT is_banned FROM users WHERE telegram_id = ?', (user_id,))
+        result = cursor.fetchone()
 
-    cursor.execute('SELECT is_banned FROM users WHERE telegram_id = ?', (user_id,))
-    result = cursor.fetchone()
-    conn.close()
-
-    return result[0] == 1
+        return result[0] == 1
 
 def user_blocked_bot(user_id: int):
-    conn = sqlite3.connect('users_data_base.db')
-    cursor = conn.cursor()
-
-    cursor.execute('UPDATE users SET is_banned = TRUE WHERE telegram_id = ?', (user_id,))
-    conn.commit()
-    cursor.close()
+    with sqlite3.connect('users_data_base.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('UPDATE users SET is_banned = TRUE WHERE telegram_id = ?', (user_id,))
 
 def set_vip(user_id: int, until: datetime.datetime):
-    conn = sqlite3.connect('users_data_base.db')
-    cursor = conn.cursor()
-    cursor.execute('UPDATE users SET is_vip = TRUE, vip_until = ? WHERE telegram_id = ?', (until, user_id))
-
-    conn.commit()
-    cursor.close()
-    conn.close()
+    with sqlite3.connect('users_data_base.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('UPDATE users SET is_vip = TRUE, vip_until = ? WHERE telegram_id = ?', (until, user_id))
+        conn.commit()
 
 def set_vip_off(user_id: int):
-    conn = sqlite3.connect('users_data_base.db')
-    cursor = conn.cursor()
-
-    cursor.execute('UPDATE users SET is_vip = FALSE, vip_until = NULL WHERE telegram_id = ?', (user_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    with sqlite3.connect('users_data_base.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('UPDATE users SET is_vip = FALSE, vip_until = NULL WHERE telegram_id = ?', (user_id,))
+        conn.commit()
 
 def user_unblocked_bot(user_id: int):
-    conn = sqlite3.connect('users_data_base.db')
-    cursor = conn.cursor()
-
-    cursor.execute('UPDATE users SET is_banned = FALSE WHERE telegram_id = ?', (user_id,))
-    conn.commit()
-    cursor.close()
+    with sqlite3.connect('users_data_base.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('UPDATE users SET is_banned = FALSE WHERE telegram_id = ?', (user_id,))
+        conn.commit()
 
 def get_all_users_id():
-    db_name = 'users_data_base.db'
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
+    with sqlite3.connect('users_data_base.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT telegram_id FROM users')
 
-    cursor.execute('SELECT telegram_id FROM users')
-    data = cursor.fetchall()
-    conn.close()
-    return data
+        data = cursor.fetchall()
+        return data
 
 def is_vip(user_id: int):
-    db_name = 'users_data_base.db'
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
+    with sqlite3.connect('users_data_base.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT is_vip FROM users WHERE telegram_id = ?', (user_id,))
+        result = cursor.fetchone()
 
-    cursor.execute('SELECT is_vip FROM users WHERE telegram_id = ?', (user_id,))
-    result = cursor.fetchone()
-    conn.close()
-
-    return result[0] == 1
+        return result[0] == 1
 
 def get_all_users():
-    db_name = 'users_data_base.db'
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
+    with sqlite3.connect('users_data_base.db') as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('SELECT telegram_id, first_name, username, joined_at FROM users')
-    result = cursor.fetchall()
-    return result
+        cursor.execute('SELECT telegram_id, first_name, username, joined_at FROM users')
+        result = cursor.fetchall()
+
+        return result
 
 def get_vip_until(user_id: int):
-    db_name = 'users_data_base.db'
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
+    with sqlite3.connect('users_data_base.db') as conn:
+        cursor = conn.cursor()
 
-    cursor.execute('SELECT vip_until FROM users WHERE telegram_id = ?', (user_id,))
-    result = cursor.fetchone()
-    conn.close()
+        cursor.execute('SELECT vip_until FROM users WHERE telegram_id = ?', (user_id,))
+        result = cursor.fetchone()
 
-    return result[0]
+        return result[0]
 
 def get_all_vip_users():
-    db_name = 'users_data_base.db'
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
+    with sqlite3.connect('users_data_base.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT telegram_id FROM users WHERE is_vip = TRUE')
+        result = cursor.fetchall()
 
-    cursor.execute('SELECT telegram_id FROM users WHERE is_vip = TRUE')
-    result = cursor.fetchall()
-    return result
+        return result
 
 def get_all_not_vip_users():
-    db_name = 'users_data_base.db'
-    conn = sqlite3.connect(db_name)
-    cursor = conn.cursor()
+    with sqlite3.connect('users_data_base.db') as conn:
+        cursor = conn.cursor()
+        cursor.execute('SELECT telegram_id FROM users WHERE is_vip = FALSE')
+        result = cursor.fetchall()
 
-    cursor.execute('SELECT telegram_id FROM users WHERE is_vip = FALSE')
-    result = cursor.fetchall()
-    return result
+        return result
 
 
 db = None
