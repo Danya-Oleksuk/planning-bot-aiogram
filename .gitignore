@@ -11,3 +11,4 @@ __pycache__
 *.spec
 users_data_base.db
 __pycache__/
+bot.log
