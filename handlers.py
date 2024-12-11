@@ -8,14 +8,15 @@ import os
 import datetime
 
 import markup
-from utils import TaskForm, PaymentForm, check_and_notify_registration, check_and_notify_fsm_state
-from database import (is_user_in_database, new_user_insert, get_tasks, add_task, edit_task_status,
-                      delete_all_tasks, delete_task, count_tasks, get_all_tasks, get_all_users, is_vip,
-                      user_blocked_bot, user_unblocked_bot, set_vip, get_vip_until, set_vip_off)
+from utils import check_and_notify_registration, check_and_notify_fsm_state, TaskForm, PaymentForm
+from database import (add_task, delete_task, get_tasks, edit_task_status, count_tasks, get_all_tasks, delete_all_tasks,
+                      is_user_in_database, new_user_insert, is_vip, set_vip, set_vip_off, get_vip_until,
+                      user_blocked_bot, user_unblocked_bot)
+
 
 load_dotenv()
-
 admin_id = os.getenv('ADMIN_ID')
+
 router_1 = Router()
 router_2 = Router()
 
@@ -24,13 +25,13 @@ async def start(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if is_user_in_database(telegram_id=message.from_user.id):
+    if await is_user_in_database(telegram_id=message.from_user.id):
         if message.from_user.id == int(admin_id):
             await message.answer("Вы уже зарегистрировались!", reply_markup=markup.get_menu(True))
         else:
             await message.answer("Вы уже зарегистрировались!", reply_markup=markup.get_menu(False))
     else:
-        new_user_insert(user_id=message.from_user.id,
+        await new_user_insert(user_id=message.from_user.id,
                         first_name=message.from_user.first_name,
                         username=message.from_user.username,
                         last_name=message.from_user.last_name,
@@ -80,13 +81,13 @@ async def show_plan(message: Message, state: FSMContext):
         else:
             await message.answer("❗️Ваш план на сегодня пуст!", reply_markup=markup.get_menu(False))
     else:
-        if is_vip(user_id=message.from_user.id) and not message.from_user.id == int(admin_id):
-            is_still_vip = datetime.datetime.now() < datetime.datetime.strptime(get_vip_until(message.from_user.id),
+        if await is_vip(user_id=message.from_user.id) and not message.from_user.id == int(admin_id):
+            is_still_vip = datetime.datetime.now() < datetime.datetime.strptime(await get_vip_until(message.from_user.id),
                                                                                 "%Y-%m-%d %H:%M:%S.%f")
             if not is_still_vip:
-                set_vip_off(user_id=message.from_user.id)
+                await set_vip_off(user_id=message.from_user.id)
 
-        if is_vip(user_id=message.from_user.id) or message.from_user.id == int(admin_id):
+        if await is_vip(user_id=message.from_user.id) or message.from_user.id == int(admin_id):
             completed_tasks = []
             not_completed_tasks = []
             status = True if message.from_user.id == int(admin_id) else False
@@ -160,15 +161,15 @@ async def create_task(message: Message, state: FSMContext):
     elif message.from_user.id == int(admin_id):
         await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
         await state.set_state(TaskForm.task_name)
-    elif is_vip(user_id=message.from_user.id):
-        is_still_vip = datetime.datetime.now() < datetime.datetime.strptime(get_vip_until(message.from_user.id),
+    elif await is_vip(user_id=message.from_user.id):
+        is_still_vip = datetime.datetime.now() < datetime.datetime.strptime(await get_vip_until(message.from_user.id),
                                                                             "%Y-%m-%d %H:%M:%S.%f")
 
         if is_still_vip:
             await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
             await state.set_state(TaskForm.task_name)
         elif not is_still_vip:
-            set_vip_off(user_id=message.from_user.id)
+            await set_vip_off(user_id=message.from_user.id)
             await message.answer("✍️ К сожалению ваша подписка прошла, продлить - /pay", reply_markup=markup.edit_menu)
     else:
         await message.answer("✍️ К сожалению лимит исчерпан, /pay", reply_markup=markup.edit_menu)
@@ -234,13 +235,13 @@ async def pay(message: Message, state: FSMContext):
     if message.from_user.id == int(admin_id):
         await message.answer("👨🏻‍💻 Ты и так админ", reply_markup=markup.get_menu(True))
     else:
-        if is_vip(user_id=message.from_user.id):
-            is_still_vip = datetime.datetime.now() < datetime.datetime.strptime(get_vip_until(message.from_user.id),
+        if await is_vip(user_id=message.from_user.id):
+            is_still_vip = datetime.datetime.now() < datetime.datetime.strptime(await get_vip_until(message.from_user.id),
                                                                                 "%Y-%m-%d %H:%M:%S.%f")
             if not is_still_vip:
-                set_vip_off(user_id=message.from_user.id)
+                await set_vip_off(user_id=message.from_user.id)
 
-        vip_until_date = get_vip_until(message.from_user.id)
+        vip_until_date = await get_vip_until(message.from_user.id)
         await state.set_state(PaymentForm.payment)
 
         if vip_until_date is None:
@@ -321,7 +322,6 @@ async def update_task_status(call: CallbackQuery):
     elif result is False:
         await call.answer("Что-то пошло не так!")
 
-
 @router_1.callback_query(F.data == 'vip_1_week_access')
 async def vip_1_week_access_(call: CallbackQuery, state: FSMContext):
 
@@ -355,7 +355,6 @@ async def vip_1_month_access_(call: CallbackQuery, state: FSMContext):
         prices=[LabeledPrice(label='XTR', amount=200)]
     )
 
-
 @router_1.callback_query(F.data == 'vip_1_year_access')
 async def vip_1_year_access_(call: CallbackQuery, state: FSMContext):
 
@@ -371,7 +370,6 @@ async def vip_1_year_access_(call: CallbackQuery, state: FSMContext):
         currency='XTR',
         prices=[LabeledPrice(label='XTR', amount=500)]
     )
-
 
 @router_1.pre_checkout_query()
 async def process_pre_checkout_query(event: PreCheckoutQuery, state: FSMContext):
@@ -391,18 +389,17 @@ async def process_successful_payment(message: Message):
     else:
         return
 
-    set_vip(user_id=message.from_user.id, until=vip_until)
-    vip_until_date = get_vip_until(message.from_user.id)
+    await set_vip(user_id=message.from_user.id, until=vip_until)
+    vip_until_date = await get_vip_until(message.from_user.id)
     await message.answer("🥳 Спасибо за поддержку бота. Все услуги предоставлены!"
                          f"\n\n<b><u>Ваша подписка теперь активна до {vip_until_date[:10]}</u></b>",
                          parse_mode=ParseMode.HTML,
                          reply_markup=markup.get_menu(False))
 
-
 @router_1.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER))
 async def user_blocked_bot_(event: ChatMemberUpdatedFilter):
-    user_blocked_bot(user_id=event.from_user.id)
+    await user_blocked_bot(user_id=event.from_user.id)
 
 @router_1.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_MEMBER))
 async def user_unblocked_bot_(event: ChatMemberUpdatedFilter):
-    user_unblocked_bot(user_id=event.from_user.id)
+    await user_unblocked_bot(user_id=event.from_user.id)

@@ -22,7 +22,7 @@ class VipForm(StatesGroup):
     date= State()
 
 async def check_and_notify_registration(message) -> bool:
-    if not is_user_in_database(telegram_id=message.from_user.id):
+    if not await is_user_in_database(telegram_id=message.from_user.id):
         await message.answer("Вы не зарегистрированы, нажмите /start!", reply_markup=ReplyKeyboardRemove())
         return False
     return True

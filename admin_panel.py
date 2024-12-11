@@ -1,5 +1,3 @@
-from zipimport import alt_path_sep
-
 from aiogram import Router, F, Bot
 from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
@@ -12,10 +10,10 @@ import datetime
 import markup
 from utils import  check_and_notify_registration, check_and_notify_fsm_state, PostForm, VipForm
 from handlers import admin_id
-from database import (is_user_in_database, new_user_insert,get_tasks, add_task,
-                      edit_task_status, delete_all_tasks, delete_task, count_tasks, get_all_tasks,
-                      get_all_users, get_all_users_id, is_vip,
-                      get_user_is_banned, get_all_vip_users, get_all_not_vip_users, set_vip)
+from database import (is_user_in_database, get_tasks, add_task, delete_task, delete_all_tasks, count_tasks,
+                      get_all_tasks, edit_task_status, get_all_users, get_all_users_id, is_vip, set_vip,
+                      get_user_is_banned, get_all_vip_users, get_all_not_vip_users)
+
 
 router = Router()
 
@@ -40,7 +38,7 @@ async def show_all_users(message: Message, state: FSMContext):
         return
 
     if message.from_user.id == int(admin_id):
-        users = get_all_users()
+        users = await get_all_users()
         users_data = [f"{i} - {x} - @{z} - {y}" for i, x, z, y in users]
         await message.answer(text="\n".join(users_data))
     else:
@@ -83,7 +81,7 @@ async def create_post_advertisement(message: Message, state: FSMContext):
         return
 
     if message.from_user.id == int(admin_id):
-        vip_users = get_all_vip_users()
+        vip_users = await get_all_vip_users()
         await message.answer(f"{len(vip_users)} vip пользователей", parse_mode=ParseMode.MARKDOWN)
     else:
         await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
@@ -97,7 +95,7 @@ async def create_post_advertisement(message: Message, state: FSMContext):
         return
 
     if message.from_user.id == int(admin_id):
-        not_vip_users = get_all_not_vip_users()
+        not_vip_users = await get_all_not_vip_users()
         await message.answer(f"{len(not_vip_users)} не vip пользователей", parse_mode=ParseMode.MARKDOWN)
     else:
         await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
@@ -135,7 +133,7 @@ async def post_text(message: Message, state: FSMContext):
     await state.update_data(until_date=message.md_text)
     data = await state.get_data()
 
-    if not is_user_in_database(telegram_id=data['user_name']):
+    if not await is_user_in_database(telegram_id=data['user_name']):
         await message.answer(f"⚠️ Был введен <b>не правильный id</b>", parse_mode=ParseMode.HTML,
                              reply_markup=markup.get_menu(True))
         await state.clear()
@@ -151,7 +149,7 @@ async def post_text(message: Message, state: FSMContext):
             elif data['until_date'] == '1y':
                 until_date = datetime.datetime.now() + datetime.timedelta(days=365)
 
-            set_vip(user_id=data['user_name'], until=until_date)
+            await set_vip(user_id=data['user_name'], until=until_date)
             await message.answer(f'🥳 Vip статус успешно подарен', reply_markup=markup.get_menu(True))
         else:
             await message.answer(f'⚠️ <b>Дата</b> введена не правильно', parse_mode=ParseMode.HTML,
@@ -197,9 +195,9 @@ async def is_post_confirm(callback_query: CallbackQuery, state: FSMContext):
         counter = 0
         data = await state.get_data()
 
-        for (tg_id, ) in get_all_users_id():
-            if not get_user_is_banned(user_id=tg_id):
-                if not is_vip(user_id=tg_id):
+        for (tg_id, ) in await get_all_users_id():
+            if not await get_user_is_banned(user_id=tg_id):
+                if not await is_vip(user_id=tg_id):
                     await bot.send_photo(chat_id=tg_id, photo=data['picture'], caption=data['text'], parse_mode=ParseMode.MARKDOWN)
                     counter += 1
 

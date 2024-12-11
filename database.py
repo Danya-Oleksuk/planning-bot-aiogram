@@ -1,6 +1,6 @@
 import datetime
 import os
-import sqlite3
+import aiosqlite
 
 import pymongo
 from dotenv import load_dotenv
@@ -8,125 +8,120 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-def create_telegram_channel_db():
-    with sqlite3.connect('users_data_base.db') as conn:
-        cursor = conn.cursor()
+async def create_telegram_channel_db():
+    async with aiosqlite.connect('users_data_base.db') as db:
+        async with db.cursor() as cursor:
+            await cursor.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  telegram_id INTEGER UNIQUE,
+                  first_name TEXT,
+                  last_name TEXT,
+                  username TEXT,
+                  is_vip BOOLEAN DEFAULT FALSE,
+                  vip_until TIMESTAMP defalut NULL,
+                  is_banned BOOLEAN DEFAULT FALSE,
+                  joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
+            await db.commit()
 
-        cursor.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              telegram_id INTEGER UNIQUE,
-              first_name TEXT,
-              last_name TEXT,
-              username TEXT,
-              is_vip BOOLEAN DEFAULT FALSE,
-              vip_until TIMESTAMP defalut NULL,
-              is_banned BOOLEAN DEFAULT FALSE,
-              joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
-        conn.commit()
+async def is_user_in_database(telegram_id: int):
+    async with aiosqlite.connect('users_data_base.db') as db:
+        async with db.cursor() as cursor:
+            await cursor.execute('SELECT 1 FROM users WHERE telegram_id = ?', (telegram_id,))
+            user_exists = await cursor.fetchone()
 
-def is_user_in_database(telegram_id: int):
-    with sqlite3.connect('users_data_base.db') as conn:
-        cursor = conn.cursor()
+            return True if user_exists else False
 
-        cursor.execute('SELECT 1 FROM users WHERE telegram_id = ?', (telegram_id,))
-        user_exists = cursor.fetchone()
+async def new_user_insert(user_id: int, first_name: str, last_name: str, username: str, is_vip: bool = False):
+    async with aiosqlite.connect('users_data_base.db') as db:
+        async with db.cursor() as cursor:
+            await cursor.execute('''
+                    INSERT INTO users (telegram_id, first_name, last_name, username, is_vip, joined_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (user_id, first_name, last_name, username, is_vip, datetime.datetime.now()))
+            await db.commit()
 
-        return True if user_exists else False
+async def get_user_is_banned(user_id: int):
+    async with aiosqlite.connect('users_data_base.db') as db:
+        async with db.cursor() as cursor:
+            await cursor.execute('SELECT is_banned FROM users WHERE telegram_id = ?', (user_id,))
+            result = await cursor.fetchone()
 
-def new_user_insert(user_id: int, first_name: str, last_name: str, username: str, is_vip: bool = False):
-    with sqlite3.connect('users_data_base.db') as conn:
-        cursor = conn.cursor()
+            return result[0] == 1
 
-        cursor.execute('''
-                INSERT INTO users (telegram_id, first_name, last_name, username, is_vip, joined_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-            ''', (user_id, first_name, last_name, username, is_vip, datetime.datetime.now()))
+async def user_blocked_bot(user_id: int):
+    async with aiosqlite.connect('users_data_base.db') as db:
+        async with db.cursor() as cursor:
+            await cursor.execute('UPDATE users SET is_banned = TRUE WHERE telegram_id = ?', (user_id,))
+            await db.commit()
 
-        conn.commit()
+async def user_unblocked_bot(user_id: int):
+    async with aiosqlite.connect('users_data_base.db') as db:
+        async with db.cursor() as cursor:
+            await cursor.execute('UPDATE users SET is_banned = FALSE WHERE telegram_id = ?', (user_id,))
+            await db.commit()
 
-def get_user_is_banned(user_id: int):
-    with sqlite3.connect('users_data_base.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT is_banned FROM users WHERE telegram_id = ?', (user_id,))
-        result = cursor.fetchone()
+async def set_vip(user_id: int, until: datetime.datetime):
+    async with aiosqlite.connect('users_data_base.db') as db:
+        async with db.cursor() as cursor:
+            await cursor.execute('UPDATE users SET is_vip = TRUE, vip_until = ? WHERE telegram_id = ?', (until, user_id))
+            await db.commit()
 
-        return result[0] == 1
+async def set_vip_off(user_id: int):
+    async with aiosqlite.connect('users_data_base.db') as db:
+        async with db.cursor() as cursor:
+            await cursor.execute('UPDATE users SET is_vip = FALSE, vip_until = NULL WHERE telegram_id = ?', (user_id,))
+            await db.commit()
 
-def user_blocked_bot(user_id: int):
-    with sqlite3.connect('users_data_base.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute('UPDATE users SET is_banned = TRUE WHERE telegram_id = ?', (user_id,))
+async def get_all_users_id():
+    async with aiosqlite.connect('users_data_base.db') as db:
+        async with db.cursor() as cursor:
+            await cursor.execute('SELECT telegram_id FROM users')
+            data = await cursor.fetchall()
 
-def set_vip(user_id: int, until: datetime.datetime):
-    with sqlite3.connect('users_data_base.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute('UPDATE users SET is_vip = TRUE, vip_until = ? WHERE telegram_id = ?', (until, user_id))
-        conn.commit()
+            return data
 
-def set_vip_off(user_id: int):
-    with sqlite3.connect('users_data_base.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute('UPDATE users SET is_vip = FALSE, vip_until = NULL WHERE telegram_id = ?', (user_id,))
-        conn.commit()
+async def is_vip(user_id: int):
+    async with aiosqlite.connect('users_data_base.db') as db:
+        async with db.cursor() as cursor:
+            await cursor.execute('SELECT is_vip FROM users WHERE telegram_id = ?', (user_id,))
+            result = await cursor.fetchone()
 
-def user_unblocked_bot(user_id: int):
-    with sqlite3.connect('users_data_base.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute('UPDATE users SET is_banned = FALSE WHERE telegram_id = ?', (user_id,))
-        conn.commit()
+            return result[0] == 1
 
-def get_all_users_id():
-    with sqlite3.connect('users_data_base.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT telegram_id FROM users')
+async def get_all_users():
+    async with aiosqlite.connect('users_data_base.db') as db:
+        async with db.cursor() as cursor:
+            await cursor.execute('SELECT telegram_id, first_name, username, joined_at FROM users')
+            result = await cursor.fetchall()
 
-        data = cursor.fetchall()
-        return data
+            return result
 
-def is_vip(user_id: int):
-    with sqlite3.connect('users_data_base.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT is_vip FROM users WHERE telegram_id = ?', (user_id,))
-        result = cursor.fetchone()
+async def get_vip_until(user_id: int):
+    async with aiosqlite.connect('users_data_base.db') as db:
+        async with db.cursor() as cursor:
+            await cursor.execute('SELECT vip_until FROM users WHERE telegram_id = ?', (user_id,))
+            result = await cursor.fetchone()
 
-        return result[0] == 1
+            return result[0]
 
-def get_all_users():
-    with sqlite3.connect('users_data_base.db') as conn:
-        cursor = conn.cursor()
+async def get_all_vip_users():
+    async with aiosqlite.connect('users_data_base.db') as db:
+        async with db.cursor() as cursor:
+            await cursor.execute('SELECT telegram_id FROM users WHERE is_vip = TRUE')
+            result = await cursor.fetchall()
 
-        cursor.execute('SELECT telegram_id, first_name, username, joined_at FROM users')
-        result = cursor.fetchall()
+            return result
 
-        return result
+async def get_all_not_vip_users():
+    async with aiosqlite.connect('users_data_base.db') as db:
+        async with db.cursor() as cursor:
+            await cursor.execute('SELECT telegram_id FROM users WHERE is_vip = FALSE')
+            result = await cursor.fetchall()
 
-def get_vip_until(user_id: int):
-    with sqlite3.connect('users_data_base.db') as conn:
-        cursor = conn.cursor()
-
-        cursor.execute('SELECT vip_until FROM users WHERE telegram_id = ?', (user_id,))
-        result = cursor.fetchone()
-
-        return result[0]
-
-def get_all_vip_users():
-    with sqlite3.connect('users_data_base.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT telegram_id FROM users WHERE is_vip = TRUE')
-        result = cursor.fetchall()
-
-        return result
-
-def get_all_not_vip_users():
-    with sqlite3.connect('users_data_base.db') as conn:
-        cursor = conn.cursor()
-        cursor.execute('SELECT telegram_id FROM users WHERE is_vip = FALSE')
-        result = cursor.fetchall()
-
-        return result
+            return result
 
 
 db = None
