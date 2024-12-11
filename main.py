@@ -14,7 +14,8 @@ load_dotenv()
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
 
 async def main():
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+                        filename="bot.log", filemode="a")
     await database.create_telegram_channel_db()
     await database.create_mongo_database()
 
