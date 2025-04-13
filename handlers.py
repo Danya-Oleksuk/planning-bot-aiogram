@@ -1,24 +1,29 @@
-from aiogram import Router, F
-from aiogram.enums import ParseMode, ChatMemberStatus
-from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove, LabeledPrice, PreCheckoutQuery
-from aiogram.filters import Command, ChatMemberUpdatedFilter, KICKED, IS_NOT_MEMBER, IS_MEMBER
-from dotenv import load_dotenv
-import os
 import datetime
 
-import markup
-from utils import check_and_notify_registration, check_and_notify_fsm_state, TaskForm, PaymentForm
-from database import (add_task, delete_task, get_tasks, edit_task_status, count_tasks, get_all_tasks, delete_all_tasks,
-                      is_user_in_database, new_user_insert, is_vip, set_vip, set_vip_off, get_vip_until,
-                      user_blocked_bot, user_unblocked_bot)
+from aiogram import F, Router
+from aiogram.enums import ParseMode
+from aiogram.filters import (IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter,
+                             Command)
+from aiogram.fsm.context import FSMContext
+from aiogram.types import (CallbackQuery, LabeledPrice, Message,
+                           PreCheckoutQuery, ReplyKeyboardRemove)
+from dotenv import load_dotenv
 
+import markup
+from config import admin_id
+from database import (add_task, count_tasks, delete_all_tasks, delete_task,
+                      edit_task_status, get_all_tasks, get_tasks,
+                      get_user_profile, get_vip_until, is_user_in_database,
+                      is_vip, new_user_insert, set_vip, set_vip_off,
+                      user_blocked_bot, user_unblocked_bot)
+from utils import (PaymentForm, TaskForm, check_and_notify_fsm_state,
+                   check_and_notify_registration)
 
 load_dotenv()
-admin_id = os.getenv('ADMIN_ID')
 
 router_1 = Router()
 router_2 = Router()
+
 
 @router_1.message(Command('start'))
 async def start(message: Message, state: FSMContext):
@@ -32,12 +37,30 @@ async def start(message: Message, state: FSMContext):
             await message.answer("Вы уже зарегистрировались!", reply_markup=markup.get_menu(False))
     else:
         await new_user_insert(user_id=message.from_user.id,
-                        first_name=message.from_user.first_name,
-                        username=message.from_user.username,
-                        last_name=message.from_user.last_name,
-                        is_vip=True if message.from_user.id == int(admin_id) else False)
+                              first_name=message.from_user.first_name,
+                              username=message.from_user.username,
+                              last_name=message.from_user.last_name,
+                              is_vip=True if message.from_user.id == int(admin_id) else False)
         await message.answer("👋 Привет, вы зарегистрировались, удачи в планировании!",
                              reply_markup=markup.get_menu(True if message.from_user.id == int(admin_id) else False))
+
+@router_1.message(F.text.in_(['/profile']))
+async def profile(message: Message, state: FSMContext):
+    if not await check_and_notify_registration(message):
+        return
+
+    if not await check_and_notify_fsm_state(message, state):
+        return
+
+    profile_data = await get_user_profile(user_id=message.from_user.id)
+
+    if message.from_user.id == int(admin_id):
+        await message.answer(f"", reply_markup=markup.get_menu(True))
+    else:
+        await message.answer("<b>Твои данные для логина на сайте:</b>\n\n"
+                             f"👨‍💻 Логин: <code>{profile_data[0]}</code>\n"
+                             f"🔑 Пароль: <code>{profile_data[1]}</code>\n",
+                             parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(False))
 
 @router_1.message(F.text.in_(['ℹ️Помощь по командам', '/help', '/info']))
 async def help(message: Message, state: FSMContext):
@@ -162,7 +185,7 @@ async def create_task(message: Message, state: FSMContext):
         await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
         await state.set_state(TaskForm.task_name)
     elif await is_vip(user_id=message.from_user.id):
-        is_still_vip = datetime.datetime.now() < datetime.datetime.strptime(await get_vip_until(message.from_user.id),
+        is_still_vip = datetime.datetime.now() < datetime.datetime.strptime(await get_vip_until(user_id=message.from_user.id),
                                                                             "%Y-%m-%d %H:%M:%S.%f")
 
         if is_still_vip:
@@ -241,7 +264,7 @@ async def pay(message: Message, state: FSMContext):
             if not is_still_vip:
                 await set_vip_off(user_id=message.from_user.id)
 
-        vip_until_date = await get_vip_until(message.from_user.id)
+        vip_until_date = await get_vip_until(user_id=message.from_user.id)
         await state.set_state(PaymentForm.payment)
 
         if vip_until_date is None:
@@ -390,7 +413,7 @@ async def process_successful_payment(message: Message):
         return
 
     await set_vip(user_id=message.from_user.id, until=vip_until)
-    vip_until_date = await get_vip_until(message.from_user.id)
+    vip_until_date = await get_vip_until(user_id=message.from_user.id)
     await message.answer("🥳 Спасибо за поддержку бота. Все услуги предоставлены!"
                          f"\n\n<b><u>Ваша подписка теперь активна до {vip_until_date[:10]}</u></b>",
                          parse_mode=ParseMode.HTML,

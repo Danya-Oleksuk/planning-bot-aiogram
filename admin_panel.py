@@ -1,19 +1,19 @@
-from aiogram import Router, F, Bot
+import datetime
+import os
+
+from aiogram import Bot, F, Router
 from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, CallbackQuery, ReplyKeyboardRemove
-from aiogram.filters import Command
+from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from dotenv import load_dotenv
-import os
-import datetime
 
 import markup
-from utils import  check_and_notify_registration, check_and_notify_fsm_state, PostForm, VipForm
-from handlers import admin_id
-from database import (is_user_in_database, get_tasks, add_task, delete_task, delete_all_tasks, count_tasks,
-                      get_all_tasks, edit_task_status, get_all_users, get_all_users_id, is_vip, set_vip,
-                      get_user_is_banned, get_all_vip_users, get_all_not_vip_users)
-
+from config import admin_id
+from database import (get_all_not_vip_users, get_all_tasks, get_all_users,
+                      get_all_users_id, get_all_vip_users, get_user_is_banned,
+                      is_user_in_database, is_vip, set_vip)
+from utils import (PostForm, VipForm, check_and_notify_fsm_state,
+                   check_and_notify_registration)
 
 router = Router()
 
@@ -195,7 +195,7 @@ async def is_post_confirm(callback_query: CallbackQuery, state: FSMContext):
         counter = 0
         data = await state.get_data()
 
-        for (tg_id, ) in await get_all_users_id():
+        for (tg_id) in await get_all_users_id():
             if not await get_user_is_banned(user_id=tg_id):
                 if not await is_vip(user_id=tg_id):
                     await bot.send_photo(chat_id=tg_id, photo=data['picture'], caption=data['text'], parse_mode=ParseMode.MARKDOWN)

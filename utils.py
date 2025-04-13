@@ -1,6 +1,5 @@
-from aiogram import BaseMiddleware
-from aiogram.fsm.state import StatesGroup, State
-from aiogram.types import ReplyKeyboardRemove, CallbackQuery
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.types import ReplyKeyboardRemove
 
 from database import is_user_in_database
 

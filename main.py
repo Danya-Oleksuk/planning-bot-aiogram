@@ -1,21 +1,24 @@
-from aiogram import Bot, Dispatcher
 import asyncio
 import logging
 import os
+
+from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
 
-import handlers
 import admin_panel
 import database
-
+import handlers
 from middlewares import AntiSpamMiddleware
 
 load_dotenv()
+
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
+
 
 async def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
                         filename="bot.log", filemode="a")
+    await database.init_pool()
     await database.create_telegram_channel_db()
     await database.create_mongo_database()
 
