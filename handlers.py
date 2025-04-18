@@ -55,7 +55,10 @@ async def profile(message: Message, state: FSMContext):
     profile_data = await get_user_profile(user_id=message.from_user.id)
 
     if message.from_user.id == int(admin_id):
-        await message.answer(f"", reply_markup=markup.get_menu(True))
+        await message.answer("<b>Твои данные для логина на сайте:</b>\n\n"
+                             f"👨‍💻 Логин: <code>{profile_data[0]}</code>\n"
+                             f"🔑 Пароль: <code>{profile_data[1]}</code>\n",
+                             parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(True))
     else:
         await message.answer("<b>Твои данные для логина на сайте:</b>\n\n"
                              f"👨‍💻 Логин: <code>{profile_data[0]}</code>\n"
