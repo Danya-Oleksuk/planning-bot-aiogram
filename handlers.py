@@ -348,6 +348,7 @@ async def update_task_status(call: CallbackQuery):
 
 @router_1.callback_query(F.data == 'vip_1_week_access')
 async def vip_1_week_access_(call: CallbackQuery, state: FSMContext):
+    await call.answer()
 
     await state.set_state(PaymentForm.waiting_for_payment)
     await call.message.answer_invoice(
@@ -364,7 +365,7 @@ async def vip_1_week_access_(call: CallbackQuery, state: FSMContext):
 
 @router_1.callback_query(F.data == 'vip_1_month_access')
 async def vip_1_month_access_(call: CallbackQuery, state: FSMContext):
-
+    await call.answer()
 
     await state.set_state(PaymentForm.waiting_for_payment)
     await call.message.answer_invoice(
@@ -381,6 +382,7 @@ async def vip_1_month_access_(call: CallbackQuery, state: FSMContext):
 
 @router_1.callback_query(F.data == 'vip_1_year_access')
 async def vip_1_year_access_(call: CallbackQuery, state: FSMContext):
+    await call.answer()
 
     await state.set_state(PaymentForm.waiting_for_payment)
     await call.message.answer_invoice(
