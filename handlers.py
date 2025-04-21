@@ -359,7 +359,7 @@ async def vip_1_week_access_(call: CallbackQuery, state: FSMContext):
                                  "\n📌 Поддержка бота",
         payload='vip_1_week_access',
         currency='XTR',
-        prices=[LabeledPrice(label='XTR', amount=1)]
+        prices=[LabeledPrice(label='XTR', amount=100)]
     )
 
 @router_1.callback_query(F.data == 'vip_1_month_access')
@@ -405,7 +405,7 @@ async def process_successful_payment(message: Message):
     payload = message.successful_payment.invoice_payload
 
     if payload == 'vip_1_week_access':
-        vip_until = datetime.datetime.now() + datetime.timedelta(seconds=20) # !!! TEST
+        vip_until = datetime.datetime.now() + datetime.timedelta(days=7)
     elif payload == 'vip_1_month_access':
         vip_until = datetime.datetime.now() + datetime.timedelta(days=30)
     elif payload == 'vip_1_year_access':
