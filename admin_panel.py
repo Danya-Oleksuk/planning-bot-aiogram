@@ -133,7 +133,7 @@ async def post_text(message: Message, state: FSMContext):
     await state.update_data(until_date=message.md_text)
     data = await state.get_data()
 
-    if not await is_user_in_database(telegram_id=data['user_name']):
+    if not await is_user_in_database(telegram_id=int(data['user_name'])):
         await message.answer(f"⚠️ Был введен <b>не правильный id</b>", parse_mode=ParseMode.HTML,
                              reply_markup=markup.get_menu(True))
         await state.clear()
@@ -149,7 +149,7 @@ async def post_text(message: Message, state: FSMContext):
             elif data['until_date'] == '1y':
                 until_date = datetime.datetime.now() + datetime.timedelta(days=365)
 
-            await set_vip(user_id=data['user_name'], until=until_date)
+            await set_vip(user_id=int(data['user_name']), until=until_date)
             await message.answer(f'🥳 Vip статус успешно подарен', reply_markup=markup.get_menu(True))
         else:
             await message.answer(f'⚠️ <b>Дата</b> введена не правильно', parse_mode=ParseMode.HTML,

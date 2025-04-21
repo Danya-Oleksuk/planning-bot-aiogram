@@ -78,8 +78,8 @@ async def help(message: Message, state: FSMContext):
                 "/edit_plan — <i>редактирование плана</i>\n"
                 "/add_task — <i>добавить новую задачу</i>\n"
                 "/remove_task — <i>удалить некоторые задачи</i>\n"
-                "/clear_plan — <i>удалить все задачи</i>\n"
-                "/pay - <i>Отключить все лимиты и поддержать бота</i>\n",
+                "/pay - <i>oтключить все лимиты и поддержать бота</i>\n"
+                "/profile - <i>логин и пароль к сайту </i>\n",
                              parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(True))
     else:
         await message.answer(
@@ -89,7 +89,8 @@ async def help(message: Message, state: FSMContext):
                 "/add_task — <i>добавить новую задачу</i>\n"
                 "/remove_task — <i>удалить некоторые задачи</i>\n"
                 "/clear_plan — <i>удалить все задачи</i>\n"
-                "/pay - <i>Отключить все лимиты и поддержать бота</i>\n",
+                "/pay - <i>oтключить все лимиты и поддержать бота</i>\n"
+                "/profile - <i>логин и пароль к сайту </i>\n",
                             parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(False))
 
 @router_1.message(F.text.in_(['📋План', '/plan']))
@@ -108,8 +109,7 @@ async def show_plan(message: Message, state: FSMContext):
             await message.answer("❗️Ваш план на сегодня пуст!", reply_markup=markup.get_menu(False))
     else:
         if await is_vip(user_id=message.from_user.id) and not message.from_user.id == int(admin_id):
-            is_still_vip = datetime.datetime.now() < datetime.datetime.strptime(await get_vip_until(message.from_user.id),
-                                                                                "%Y-%m-%d %H:%M:%S.%f")
+            is_still_vip = datetime.datetime.now() < await get_vip_until(message.from_user.id)
             if not is_still_vip:
                 await set_vip_off(user_id=message.from_user.id)
 
@@ -188,8 +188,7 @@ async def create_task(message: Message, state: FSMContext):
         await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
         await state.set_state(TaskForm.task_name)
     elif await is_vip(user_id=message.from_user.id):
-        is_still_vip = datetime.datetime.now() < datetime.datetime.strptime(await get_vip_until(user_id=message.from_user.id),
-                                                                            "%Y-%m-%d %H:%M:%S.%f")
+        is_still_vip = datetime.datetime.now() < await get_vip_until(user_id=message.from_user.id)
 
         if is_still_vip:
             await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
@@ -262,8 +261,7 @@ async def pay(message: Message, state: FSMContext):
         await message.answer("👨🏻‍💻 Ты и так админ", reply_markup=markup.get_menu(True))
     else:
         if await is_vip(user_id=message.from_user.id):
-            is_still_vip = datetime.datetime.now() < datetime.datetime.strptime(await get_vip_until(message.from_user.id),
-                                                                                "%Y-%m-%d %H:%M:%S.%f")
+            is_still_vip = datetime.datetime.now() < await get_vip_until(message.from_user.id)
             if not is_still_vip:
                 await set_vip_off(user_id=message.from_user.id)
 
@@ -278,7 +276,7 @@ async def pay(message: Message, state: FSMContext):
                                  "\n📌 <i>Поддержка бота</i>"
                                  "\n\n<i>Выберите подходящий для вас срок подписки:</i>", parse_mode=ParseMode.HTML, reply_markup=markup.vip_menu)
         else:
-            await message.answer(f"<b><u>Ваша подписка еще активна до {vip_until_date[:10]}\n\n</u></b>"
+            await message.answer(f"<b><u>Ваша подписка еще активна до {vip_until_date.strftime('%Y-%m-%d')}\n\n</u></b>"
                                  "<b>Приобретая премиум, вы открываете для себя расширенные возможности:</b>"
                                  "\n\n📌 <i>Отсутствие лимита задач</i>"
                                  "\n📌 <i>Сортировка задач по выполнению</i>"
@@ -418,7 +416,7 @@ async def process_successful_payment(message: Message):
     await set_vip(user_id=message.from_user.id, until=vip_until)
     vip_until_date = await get_vip_until(user_id=message.from_user.id)
     await message.answer("🥳 Спасибо за поддержку бота. Все услуги предоставлены!"
-                         f"\n\n<b><u>Ваша подписка теперь активна до {vip_until_date[:10]}</u></b>",
+                         f"\n\n<b><u>Ваша подписка теперь активна до {vip_until_date.strftime('%Y-%m-%d')}</u></b>",
                          parse_mode=ParseMode.HTML,
                          reply_markup=markup.get_menu(False))
 

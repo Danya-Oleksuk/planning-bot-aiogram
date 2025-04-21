@@ -77,7 +77,7 @@ async def is_vip(user_id: int):
         result = await conn.fetchval('SELECT is_vip FROM users WHERE telegram_id = $1', user_id)
         return result
 
-async def get_all_users(pool: asyncpg.pool.Pool):
+async def get_all_users():
     async with pool.acquire() as conn:
         result = await conn.fetch('SELECT telegram_id, first_name, username, joined_at FROM users')
         return result
