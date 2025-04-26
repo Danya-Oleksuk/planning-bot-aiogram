@@ -128,11 +128,15 @@ async def show_plan(message: Message, state: FSMContext):
                 answer = "🗂 <b>Твой план:</b>\n\n" + "\n".join(
                     [f"{i + 1}. {list(task.keys())[0]} - {list(task.values())[0]}" for i, task in
                      enumerate(not_completed_tasks)])
-            else:
+            elif completed_tasks and not_completed_tasks:
                 answer = "🗂 <b>Твой план:</b>\n\n" + "\n".join(
                     [f"{i + 1}. {list(task.keys())[0]} - {list(task.values())[0]}" for i, task in
                      enumerate(not_completed_tasks)]) + "\n————————\n\n" + '\n'.join(
                     [f"{i + 1}. <s>{list(task.keys())[0]}</s> - {list(task.values())[0]}" for i, task in
+                     enumerate(completed_tasks)])
+            else:
+                answer = "🗂 <b>Твой план:</b>\n\n" + "\n".join(
+                    [f"{i + 1}. {list(task.keys())[0]} - {list(task.values())[0]}" for i, task in
                      enumerate(completed_tasks)])
             await message.answer(text=answer, reply_markup=markup.get_menu(status), parse_mode=ParseMode.HTML)
         else:
