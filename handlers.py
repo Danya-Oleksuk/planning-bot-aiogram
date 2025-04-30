@@ -25,6 +25,7 @@ router_1 = Router()
 router_2 = Router()
 
 
+
 @router_1.message(Command('start'))
 async def start(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
