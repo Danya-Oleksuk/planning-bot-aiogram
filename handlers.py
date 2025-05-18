@@ -236,9 +236,9 @@ async def edit_task_status_(message: Message, state: FSMContext):
     if not tasks:
         await message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
     else:
-        tasks = [key for task in tasks for key in task.keys()]
+        task_pairs = [(key, value) for task in tasks for key, value in task.items()]
         await message.answer(f"Выберете задачу, которую вы хотите выполнить:\n\n" + "\n".join(
-            [f"{i + 1}. {task}" for i, task in enumerate(tasks)]),
+            [f"{i + 1}. {task[0]} - {task[1]}" for i, task in enumerate(task_pairs)]),
                              reply_markup=markup.inline_builder(num=await count_tasks(user_id=message.from_user.id),
                                                                 emoji="✅", action="update"))
 
