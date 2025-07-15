@@ -1,5 +1,13 @@
 
-# 🤖 Planning Bot (Aiogram)
+<h1 align="center"> 🤖 Planning Bot (Aiogram) </h1>
+
+<table align="center">
+  <tr>
+    <td align="center"><img src="assets/screenshots/main-page-2.jpg" width="250"/><br/>Main Page</td>
+    <td align="center"><img src="assets/screenshots/menu.jpg" width="250"/><br/>Task Menu</td>
+    <td align="center"><img src="assets/screenshots/vip-menu.jpg" width="250"/><br/>VIP Features</td>
+  </tr>
+</table>
 
 Your no-stress personal task manager right in Telegram.
 
