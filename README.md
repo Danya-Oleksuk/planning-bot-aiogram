@@ -54,9 +54,17 @@ You can either set them as system variables or create a `.env` file.
 Example `.env`:
 
 ```env
-BOT_TOKEN=your_telegram_bot_token
-DATABASE_URL=postgresql://user:password@localhost:5432/planning_bot
-ADMINS=123456789  # Telegram user ID(s)
+BOT_TOKEN=<your_telegram_bot_token>
+
+ADMIN_ID=<your_telegram_id>
+
+DB_USER=<your_db_user>
+DB_PASSWORD=<your_db_password>
+DB_NAME=<your_db_name>
+DB_HOST=<your_db_host>
+
+
+MONGO_API_TOKEN=<your_mongo_api>
 ```
 
 ### 4. Launch the Bot
