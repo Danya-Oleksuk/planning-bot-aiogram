@@ -6,7 +6,7 @@ from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
 
 from handlers.user_handlers import router_1, router_2
-from handlers.admin_panel import router
+from handlers.admin_handlers import router
 
 import database
 
