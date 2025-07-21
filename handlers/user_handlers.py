@@ -9,10 +9,10 @@ from aiogram.types import (CallbackQuery, LabeledPrice, Message,
                            PreCheckoutQuery, ReplyKeyboardRemove)
 from dotenv import load_dotenv
 
-import markup
+from keyboards import markup
 from config import admin_id
 from database import (add_task, count_tasks, delete_all_tasks, delete_task,
-                      edit_task_status, get_all_tasks, get_tasks,
+                      edit_task_status, get_tasks,
                       get_user_profile, get_vip_until, is_user_in_database,
                       is_vip, new_user_insert, set_vip, set_vip_off,
                       user_blocked_bot, user_unblocked_bot)

@@ -7,7 +7,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from dotenv import load_dotenv
 
-import markup
+from keyboards import markup
 from config import admin_id
 from database import (get_all_not_vip_users, get_all_tasks, get_all_users,
                       get_all_users_id, get_all_vip_users, get_user_is_banned,

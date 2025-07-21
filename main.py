@@ -5,15 +5,16 @@ import os
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
 
-import admin_panel
+from handlers.user_handlers import router_1, router_2
+from handlers.admin_panel import router
+
 import database
-import handlers
-from middlewares import AntiSpamMiddleware
+
+from middlewares.anti_spam_middleware import AntiSpamMiddleware
 
 load_dotenv()
 
 BOT_TOKEN = os.environ.get('BOT_TOKEN')
-
 
 async def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -25,12 +26,12 @@ async def main():
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()
 
-    handlers.router_1.message.middleware(AntiSpamMiddleware(cache_ttl=0.5))
-    handlers.router_2.message.middleware(AntiSpamMiddleware(cache_ttl=0.3))
+    router_1.message.middleware(AntiSpamMiddleware(cache_ttl=0.5))
+    router_2.message.middleware(AntiSpamMiddleware(cache_ttl=0.3))
 
-    dp.include_routers(handlers.router_1,
-                       handlers.router_2,
-                       admin_panel.router,)
+    dp.include_routers(router_1,
+                       router_2,
+                       router,)
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
