@@ -160,11 +160,11 @@ async def clear_plan(message: Message, state: FSMContext):
     res = await delete_all_tasks(user_id=message.from_user.id)
     if res is True:
         if message.from_user.id == int(ADMIN_ID):
-            await message.answer(f"❗️Теперь ваш план пуст", reply_markup=markup.get_menu(True))
+            await message.answer("❗️Теперь ваш план пуст", reply_markup=markup.get_menu(True))
         else:
-            await message.answer(f"❗️Теперь ваш план пуст", reply_markup=markup.get_menu(False))
+            await message.answer("❗️Теперь ваш план пуст", reply_markup=markup.get_menu(False))
     else:
-        await message.answer(f"❗️План и так пуст", reply_markup=markup.edit_menu)
+        await message.answer("❗️План и так пуст", reply_markup=markup.edit_menu)
 
 @router_2.message(F.text.in_(['📝Редактировать план', '/edit_plan']))
 async def edit_plan(message: Message, state: FSMContext):
@@ -216,7 +216,7 @@ async def initiate_task_removal(message: Message, state: FSMContext):
         await message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
     else:
         task_pairs = [(key, value) for task in tasks for key, value in task.items()]
-        await message.answer(f"Выберете задачу, которую вы хотите удалить:\n\n" + "\n".join(
+        await message.answer("Выберете задачу, которую вы хотите удалить:\n\n" + "\n".join(
             [f"{i + 1}. {task[0]} - {task[1]}" for i, task in enumerate(task_pairs)]),
                              reply_markup=markup.inline_builder(num=await count_tasks(user_id=message.from_user.id),
                                                                 emoji="🗑", action="delete"))
@@ -234,7 +234,7 @@ async def edit_task_status_(message: Message, state: FSMContext):
         await message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
     else:
         task_pairs = [(key, value) for task in tasks for key, value in task.items()]
-        await message.answer(f"Выберете задачу, которую вы хотите выполнить:\n\n" + "\n".join(
+        await message.answer("Выберете задачу, которую вы хотите выполнить:\n\n" + "\n".join(
             [f"{i + 1}. {task[0]} - {task[1]}" for i, task in enumerate(task_pairs)]),
                              reply_markup=markup.inline_builder(num=await count_tasks(user_id=message.from_user.id),
                                                                 emoji="✅", action="update"))
@@ -311,7 +311,7 @@ async def confirm_task_removal(call: CallbackQuery):
             await call.message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
         else:
             task_pairs = [(key, value) for task in tasks for key, value in task.items()]
-            await call.message.answer(f"Выберете задачу, которую вы хотите удалить:\n\n" + "\n".join(
+            await call.message.answer("Выберете задачу, которую вы хотите удалить:\n\n" + "\n".join(
                 [f"{i + 1}. {task[0]} - {task[1]}" for i, task in enumerate(task_pairs)]),
                                  reply_markup=markup.inline_builder(num=await count_tasks(user_id=call.from_user.id),
                                                                     emoji="🗑", action="delete"))
@@ -340,7 +340,7 @@ async def update_task_status(call: CallbackQuery):
         ]
 
         await call.message.answer(
-            f"Выберите задачу, которую вы хотите выполнить:\n\n" + "\n".join(tasks_list), parse_mode=ParseMode.HTML,
+            "Выберите задачу, которую вы хотите выполнить:\n\n" + "\n".join(tasks_list), parse_mode=ParseMode.HTML,
             reply_markup=markup.inline_builder(num=await count_tasks(user_id=call.from_user.id), emoji="✅", action="update"))
         await call.answer("Обновил")
 
