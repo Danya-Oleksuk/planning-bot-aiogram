@@ -8,7 +8,7 @@ from dotenv import load_dotenv
 from handlers.user_handlers import router_1, router_2
 from handlers.admin_handlers import router
 
-import database
+from database import postgres, mongo
 
 from middlewares.anti_spam_middleware import AntiSpamMiddleware
 
@@ -19,9 +19,11 @@ BOT_TOKEN = os.environ.get('BOT_TOKEN')
 async def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
                         filename="bot.log", filemode="a")
-    await database.init_pool()
-    await database.create_telegram_channel_db()
-    await database.create_mongo_database()
+    
+    await postgres.initiate_pool()
+    
+    await postgres.create_telegram_bot_db()
+    await mongo.create_mongo_database()
 
     bot = Bot(token=BOT_TOKEN)
     dp = Dispatcher()

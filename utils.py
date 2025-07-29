@@ -1,7 +1,7 @@
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import ReplyKeyboardRemove
 
-from database import is_user_in_database
+from database.postgres import is_user_in_database
 
 
 class TaskForm(StatesGroup):

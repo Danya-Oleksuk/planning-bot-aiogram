@@ -10,21 +10,22 @@ from aiogram.types import (CallbackQuery, LabeledPrice, Message,
 from dotenv import load_dotenv
 
 from keyboards import markup
+
+from database.postgres import (is_user_in_database, new_user_insert, is_vip, set_vip, set_vip_off, 
+                               get_vip_until, user_blocked_bot, user_unblocked_bot, get_user_profile)
+
+from database.mongo import (get_tasks, count_tasks, add_task, edit_task_status,
+                            delete_task, delete_all_tasks)
+
+from utils import PaymentForm, TaskForm, check_and_notify_fsm_state, check_and_notify_registration
+
 from config import admin_id
-from database import (add_task, count_tasks, delete_all_tasks, delete_task,
-                      edit_task_status, get_tasks,
-                      get_user_profile, get_vip_until, is_user_in_database,
-                      is_vip, new_user_insert, set_vip, set_vip_off,
-                      user_blocked_bot, user_unblocked_bot)
-from utils import (PaymentForm, TaskForm, check_and_notify_fsm_state,
-                   check_and_notify_registration)
+
 
 load_dotenv()
 
 router_1 = Router()
 router_2 = Router()
-
-
 
 @router_1.message(Command('start'))
 async def start(message: Message, state: FSMContext):

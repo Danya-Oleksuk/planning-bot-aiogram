@@ -8,12 +8,17 @@ from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from dotenv import load_dotenv
 
 from keyboards import markup
+
+from database.postgres import (get_all_users, get_all_users_id, get_user_is_banned,
+                               is_user_in_database, is_vip, set_vip, get_all_vip_users,
+                               get_all_not_vip_users)
+
+from database.mongo import get_all_tasks
+
+from utils import PostForm, VipForm, check_and_notify_fsm_state, check_and_notify_registration
+
 from config import admin_id
-from database import (get_all_not_vip_users, get_all_tasks, get_all_users,
-                      get_all_users_id, get_all_vip_users, get_user_is_banned,
-                      is_user_in_database, is_vip, set_vip)
-from utils import (PostForm, VipForm, check_and_notify_fsm_state,
-                   check_and_notify_registration)
+
 
 router = Router()
 
