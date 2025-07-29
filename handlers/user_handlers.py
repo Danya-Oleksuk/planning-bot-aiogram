@@ -7,7 +7,6 @@ from aiogram.filters import (IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter,
 from aiogram.fsm.context import FSMContext
 from aiogram.types import (CallbackQuery, LabeledPrice, Message,
                            PreCheckoutQuery, ReplyKeyboardRemove)
-from dotenv import load_dotenv
 
 from keyboards import markup
 
@@ -19,10 +18,8 @@ from database.mongo import (get_tasks, count_tasks, add_task, edit_task_status,
 
 from utils import PaymentForm, TaskForm, check_and_notify_fsm_state, check_and_notify_registration
 
-from config import admin_id
+from config import ADMIN_ID
 
-
-load_dotenv()
 
 router_1 = Router()
 router_2 = Router()
@@ -33,7 +30,7 @@ async def start(message: Message, state: FSMContext):
         return
 
     if await is_user_in_database(telegram_id=message.from_user.id):
-        if message.from_user.id == int(admin_id):
+        if message.from_user.id == int(ADMIN_ID):
             await message.answer("Вы уже зарегистрировались!", reply_markup=markup.get_menu(True))
         else:
             await message.answer("Вы уже зарегистрировались!", reply_markup=markup.get_menu(False))
@@ -42,9 +39,9 @@ async def start(message: Message, state: FSMContext):
                               first_name=message.from_user.first_name,
                               username=message.from_user.username,
                               last_name=message.from_user.last_name,
-                              is_vip=True if message.from_user.id == int(admin_id) else False)
+                              is_vip=True if message.from_user.id == int(ADMIN_ID) else False)
         await message.answer("👋 Привет, вы зарегистрировались, удачи в планировании!",
-                             reply_markup=markup.get_menu(True if message.from_user.id == int(admin_id) else False))
+                             reply_markup=markup.get_menu(True if message.from_user.id == int(ADMIN_ID) else False))
 
 @router_1.message(F.text.in_(['/profile']))
 async def profile(message: Message, state: FSMContext):
@@ -56,7 +53,7 @@ async def profile(message: Message, state: FSMContext):
 
     profile_data = await get_user_profile(user_id=message.from_user.id)
 
-    if message.from_user.id == int(admin_id):
+    if message.from_user.id == int(ADMIN_ID):
         await message.answer("<b>Твои данные для логина на сайте:</b>\n\n"
                              f"👨‍💻 Логин: <code>{profile_data[0]}</code>\n"
                              f"🔑 Пароль: <code>{profile_data[1]}</code>\n",
@@ -74,7 +71,7 @@ async def help(message: Message, state: FSMContext):
 
     if not await check_and_notify_fsm_state(message, state):
         return
-    if message.from_user.id == int(admin_id):
+    if message.from_user.id == int(ADMIN_ID):
         await message.answer("<b>Информация по командам</b>\n\n"
                 "/plan — <i>показ текущего плана</i>\n"
                 "/edit_plan — <i>редактирование плана</i>\n"
@@ -105,20 +102,20 @@ async def show_plan(message: Message, state: FSMContext):
 
     tasks = await get_tasks(user_id=message.from_user.id)
     if not tasks:
-        if message.from_user.id == int(admin_id):
+        if message.from_user.id == int(ADMIN_ID):
             await message.answer("❗️Ваш план на сегодня пуст!", reply_markup=markup.get_menu(True))
         else:
             await message.answer("❗️Ваш план на сегодня пуст!", reply_markup=markup.get_menu(False))
     else:
-        if await is_vip(user_id=message.from_user.id) and not message.from_user.id == int(admin_id):
+        if await is_vip(user_id=message.from_user.id) and not message.from_user.id == int(ADMIN_ID):
             is_still_vip = datetime.datetime.now() < await get_vip_until(message.from_user.id)
             if not is_still_vip:
                 await set_vip_off(user_id=message.from_user.id)
 
-        if await is_vip(user_id=message.from_user.id) or message.from_user.id == int(admin_id):
+        if await is_vip(user_id=message.from_user.id) or message.from_user.id == int(ADMIN_ID):
             completed_tasks = []
             not_completed_tasks = []
-            status = True if message.from_user.id == int(admin_id) else False
+            status = True if message.from_user.id == int(ADMIN_ID) else False
 
             for x in tasks:
                 if list(x.values())[0] == '✅':
@@ -162,7 +159,7 @@ async def clear_plan(message: Message, state: FSMContext):
 
     res = await delete_all_tasks(user_id=message.from_user.id)
     if res is True:
-        if message.from_user.id == int(admin_id):
+        if message.from_user.id == int(ADMIN_ID):
             await message.answer(f"❗️Теперь ваш план пуст", reply_markup=markup.get_menu(True))
         else:
             await message.answer(f"❗️Теперь ваш план пуст", reply_markup=markup.get_menu(False))
@@ -190,7 +187,7 @@ async def create_task(message: Message, state: FSMContext):
     if await count_tasks(user_id=message.from_user.id) < 3:
         await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
         await state.set_state(TaskForm.task_name)
-    elif message.from_user.id == int(admin_id):
+    elif message.from_user.id == int(ADMIN_ID):
         await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
         await state.set_state(TaskForm.task_name)
     elif await is_vip(user_id=message.from_user.id):
@@ -249,7 +246,7 @@ async def back_1(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == int(admin_id):
+    if message.from_user.id == int(ADMIN_ID):
         await message.answer('⚙️ Меню', reply_markup=markup.get_menu(True))
     else:
         await message.answer('⚙️ Меню', reply_markup=markup.get_menu(False))
@@ -262,7 +259,7 @@ async def pay(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == int(admin_id):
+    if message.from_user.id == int(ADMIN_ID):
         await message.answer("👨🏻‍💻 Ты и так админ", reply_markup=markup.get_menu(True))
     else:
         if await is_vip(user_id=message.from_user.id):
@@ -332,7 +329,7 @@ async def update_task_status(call: CallbackQuery):
         tasks = await get_tasks(user_id=call.from_user.id)
 
         if not tasks:
-            if call.from_user.id == int(admin_id):
+            if call.from_user.id == int(ADMIN_ID):
                 await call.message.answer("❗️Ваш план теперь пуст", reply_markup=markup.get_menu(True))
             else:
                 await call.message.answer("❗️Ваш план теперь пуст", reply_markup=markup.get_menu(False))

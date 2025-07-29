@@ -1,11 +1,9 @@
 import datetime
-import os
 
 from aiogram import Bot, F, Router
 from aiogram.enums import ParseMode
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
-from dotenv import load_dotenv
 
 from keyboards import markup
 
@@ -17,7 +15,7 @@ from database.mongo import get_all_tasks
 
 from utils import PostForm, VipForm, check_and_notify_fsm_state, check_and_notify_registration
 
-from config import admin_id
+from config import ADMIN_ID, BOT_TOKEN
 
 
 router = Router()
@@ -29,7 +27,7 @@ async def admin_panel(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == int(admin_id):
+    if message.from_user.id == ADMIN_ID:
         await message.answer("👨🏻‍💻 Админ панель активирована:", reply_markup=markup.admin_panel)
     else:
         await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
@@ -42,7 +40,7 @@ async def show_all_users(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == int(admin_id):
+    if message.from_user.id == ADMIN_ID:
         users = await get_all_users()
         users_data = [f"{i} - {x} - @{z} - {y}" for i, x, z, y in users]
         await message.answer(text="\n".join(users_data))
@@ -57,7 +55,7 @@ async def show_all_collections(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == int(admin_id):
+    if message.from_user.id == ADMIN_ID:
         collections = await get_all_tasks()
         await message.answer(text=f"\n".join(collections))
     else:
@@ -71,7 +69,7 @@ async def create_post_advertisement(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == int(admin_id):
+    if message.from_user.id == ADMIN_ID:
         await message.answer("📖 Введите текст поста:", parse_mode=ParseMode.MARKDOWN, reply_markup=ReplyKeyboardRemove())
         await state.set_state(PostForm.text)
     else:
@@ -85,7 +83,7 @@ async def create_post_advertisement(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == int(admin_id):
+    if message.from_user.id == ADMIN_ID:
         vip_users = await get_all_vip_users()
         await message.answer(f"{len(vip_users)} vip пользователей", parse_mode=ParseMode.MARKDOWN)
     else:
@@ -99,7 +97,7 @@ async def create_post_advertisement(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == int(admin_id):
+    if message.from_user.id == ADMIN_ID:
         not_vip_users = await get_all_not_vip_users()
         await message.answer(f"{len(not_vip_users)} не vip пользователей", parse_mode=ParseMode.MARKDOWN)
     else:
@@ -113,7 +111,7 @@ async def gift_the_vip(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == int(admin_id):
+    if message.from_user.id == ADMIN_ID:
         await message.answer("🆔 Введите id пользователя:", parse_mode=ParseMode.MARKDOWN,
                              reply_markup=ReplyKeyboardRemove())
         await state.set_state(VipForm.user_name)
@@ -193,8 +191,7 @@ async def post_picture(message: Message, state: FSMContext):
 async def is_post_confirm(callback_query: CallbackQuery, state: FSMContext):
 
     if callback_query.data == 'post_confirm':
-        load_dotenv()
-        bot_token = os.environ.get('BOT_TOKEN')
+        bot_token = BOT_TOKEN
 
         bot = Bot(token=bot_token)
         counter = 0
@@ -220,7 +217,7 @@ async def error(message: Message):
     if not await check_and_notify_registration(message):
         return
 
-    if message.from_user.id == int(admin_id):
+    if message.from_user.id == ADMIN_ID:
         await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(True))
     else:
         await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))

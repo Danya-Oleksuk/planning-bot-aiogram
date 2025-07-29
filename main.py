@@ -1,9 +1,7 @@
 import asyncio
 import logging
-import os
 
 from aiogram import Bot, Dispatcher
-from dotenv import load_dotenv
 
 from handlers.user_handlers import router_1, router_2
 from handlers.admin_handlers import router
@@ -12,9 +10,10 @@ from database import postgres, mongo
 
 from middlewares.anti_spam_middleware import AntiSpamMiddleware
 
-load_dotenv()
+import config
 
-BOT_TOKEN = os.environ.get('BOT_TOKEN')
+
+BOT_TOKEN = config.BOT_TOKEN
 
 async def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",

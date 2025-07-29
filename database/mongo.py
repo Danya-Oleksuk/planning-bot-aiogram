@@ -1,7 +1,6 @@
 import pymongo
-import os
 
-from dotenv import load_dotenv
+from config import MONGO_API_TOKEN
 
 
 db = None
@@ -10,7 +9,7 @@ tasks_collection = None
 async def create_mongo_database():
     global tasks_collection, db
 
-    main_client = pymongo.AsyncMongoClient(os.environ.get('MONGO_API_TOKEN'))
+    main_client = pymongo.AsyncMongoClient(MONGO_API_TOKEN)
     db = main_client['tasks_database']
 
     tasks_collection = db['tasks']

@@ -1,6 +1,6 @@
 import os
-
 from dotenv import load_dotenv
+
 
 load_dotenv()
 
@@ -11,4 +11,8 @@ DB_CONFIG = {
     "host": os.getenv("DB_HOST"),
 }
 
-admin_id = os.getenv('ADMIN_ID')
+ADMIN_ID = int(os.getenv('ADMIN_ID'))
+
+BOT_TOKEN = os.getenv("BOT_TOKEN")
+
+MONGO_API_TOKEN = os.getenv("MONGO_API_TOKEN")
