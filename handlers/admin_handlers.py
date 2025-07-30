@@ -204,7 +204,8 @@ async def is_post_confirm(callback_query: CallbackQuery, state: FSMContext):
                     counter += 1
 
         await state.clear()
-        await callback_query.message.answer(f"🆒 Реклама успешно доставлена, {counter} юзеров получили рекламу.", reply_markup=markup.admin_panel)
+        await callback_query.message.answer(f"🎯 <b>Реклама успешно доставлена!</b>\n👤 Кол-во получателей: <b><u>{counter}</u></b>",
+                                            reply_markup=markup.admin_panel, parse_mode=ParseMode.HTML)
         await callback_query.answer()
 
     elif callback_query.data == 'post_cancel':
