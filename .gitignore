@@ -12,3 +12,5 @@ __pycache__
 users_data_base.db
 __pycache__/
 bot.log
+.ruff_cache
+.ruff_cache/
