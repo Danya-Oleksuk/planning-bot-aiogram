@@ -10,11 +10,11 @@ from aiogram.types import (CallbackQuery, LabeledPrice, Message,
 
 from keyboards import markup
 
-from database.postgres import (is_user_in_database, new_user_insert, is_vip, set_vip, set_vip_off, 
-                               get_vip_until, user_blocked_bot, user_unblocked_bot, get_user_profile)
+from database.postgres import (is_user_in_database, create_user, is_user_vip, activate_vip, deactivate_vip, 
+                               get_vip_expiration, user_blocked_bot, user_unblocked_bot, get_user_profile)
 
-from database.mongo import (get_tasks, count_tasks, add_task, edit_task_status,
-                            delete_task, delete_all_tasks)
+from database.mongo import (fetch_tasks, count_user_tasks, create_task, mark_task_completed,
+                            delete_task_by_index, delete_all_tasks)
 
 from utils import is_admin, PaymentForm, TaskForm, check_and_notify_fsm_state, check_and_notify_registration
 
@@ -32,7 +32,7 @@ async def start(message: Message, state: FSMContext):
     if await is_user_in_database(telegram_id=message.from_user.id):
         await message.answer("Вы уже зарегистрировались!", reply_markup=markup.get_menu(message.from_user.id))
     else:
-        await new_user_insert(user_id=message.from_user.id,
+        await create_user(user_id=message.from_user.id,
                               first_name=message.from_user.first_name,
                               username=message.from_user.username,
                               last_name=message.from_user.last_name,
@@ -83,16 +83,16 @@ async def show_plan(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    tasks = await get_tasks(user_id=message.from_user.id)
+    tasks = await fetch_tasks(user_id=message.from_user.id)
     if not tasks:
         await message.answer("❗️Ваш план на сегодня пуст!", reply_markup=markup.get_menu(message.from_user.id))
     else:
-        if await is_vip(user_id=message.from_user.id) and not is_admin(message.from_user.id):
-            is_still_vip = datetime.datetime.now() < await get_vip_until(message.from_user.id)
+        if await is_user_vip(user_id=message.from_user.id) and not is_admin(message.from_user.id):
+            is_still_vip = datetime.datetime.now() < await get_vip_expiration(message.from_user.id)
             if not is_still_vip:
-                await set_vip_off(user_id=message.from_user.id)
+                await deactivate_vip(user_id=message.from_user.id)
 
-        if await is_vip(user_id=message.from_user.id) or is_admin(message.from_user.id):
+        if await is_user_vip(user_id=message.from_user.id) or is_admin(message.from_user.id):
             completed_tasks = []
             not_completed_tasks = []
 
@@ -153,27 +153,27 @@ async def edit_plan(message: Message, state: FSMContext):
     await message.answer("🖋 Меню редактирования: ", reply_markup=markup.edit_menu)
 
 @router_1.message(F.text.in_(['➕ Добавить задачу', '/add_task']))
-async def create_task(message: Message, state: FSMContext):
+async def create_task_(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
 
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if await count_tasks(user_id=message.from_user.id) < 3:
+    if await count_user_tasks(user_id=message.from_user.id) < 3:
         await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
         await state.set_state(TaskForm.task_name)
     elif message.from_user.id == int(ADMIN_ID):
         await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
         await state.set_state(TaskForm.task_name)
-    elif await is_vip(user_id=message.from_user.id):
-        is_still_vip = datetime.datetime.now() < await get_vip_until(user_id=message.from_user.id)
+    elif await is_user_vip(user_id=message.from_user.id):
+        is_still_vip = datetime.datetime.now() < await get_vip_expiration(user_id=message.from_user.id)
 
         if is_still_vip:
             await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
             await state.set_state(TaskForm.task_name)
         elif not is_still_vip:
-            await set_vip_off(user_id=message.from_user.id)
+            await deactivate_vip(user_id=message.from_user.id)
             await message.answer("✍️ К сожалению ваша подписка прошла, продлить - /pay", reply_markup=markup.edit_menu)
     else:
         await message.answer("✍️ К сожалению лимит исчерпан, /pay", reply_markup=markup.edit_menu)
@@ -186,7 +186,7 @@ async def initiate_task_removal(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    tasks = await get_tasks(user_id=message.from_user.id)
+    tasks = await fetch_tasks(user_id=message.from_user.id)
 
     if not tasks:
         await message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
@@ -194,7 +194,7 @@ async def initiate_task_removal(message: Message, state: FSMContext):
         task_pairs = [(key, value) for task in tasks for key, value in task.items()]
         await message.answer("Выберете задачу, которую вы хотите удалить:\n\n" + "\n".join(
             [f"{i + 1}. {task[0]} - {task[1]}" for i, task in enumerate(task_pairs)]),
-                             reply_markup=markup.inline_builder(num=await count_tasks(user_id=message.from_user.id),
+                             reply_markup=markup.inline_builder(num=await count_user_tasks(user_id=message.from_user.id),
                                                                 emoji="🗑", action="delete"))
 
 @router_2.message(F.text.in_(['✔️ Изменить статус задачи', '/edit_task_status']))
@@ -205,14 +205,14 @@ async def edit_task_status_(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    tasks = await get_tasks(user_id=message.from_user.id)
+    tasks = await fetch_tasks(user_id=message.from_user.id)
     if not tasks:
         await message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
     else:
         task_pairs = [(key, value) for task in tasks for key, value in task.items()]
         await message.answer("Выберете задачу, которую вы хотите выполнить:\n\n" + "\n".join(
             [f"{i + 1}. {task[0]} - {task[1]}" for i, task in enumerate(task_pairs)]),
-                             reply_markup=markup.inline_builder(num=await count_tasks(user_id=message.from_user.id),
+                             reply_markup=markup.inline_builder(num=await count_user_tasks(user_id=message.from_user.id),
                                                                 emoji="✅", action="update"))
 
 @router_2.message(F.text.in_(['⬅️ Назад', ]))
@@ -235,12 +235,12 @@ async def pay(message: Message, state: FSMContext):
     if is_admin(message.from_user.id):
         await message.answer("👨🏻‍💻 Ты и так админ", reply_markup=markup.get_menu(message.from_user.id))
     else:
-        if await is_vip(user_id=message.from_user.id):
-            is_still_vip = datetime.datetime.now() < await get_vip_until(message.from_user.id)
+        if await is_user_vip(user_id=message.from_user.id):
+            is_still_vip = datetime.datetime.now() < await get_vip_expiration(message.from_user.id)
             if not is_still_vip:
-                await set_vip_off(user_id=message.from_user.id)
+                await deactivate_vip(user_id=message.from_user.id)
 
-        vip_until_date = await get_vip_until(user_id=message.from_user.id)
+        vip_until_date = await get_vip_expiration(user_id=message.from_user.id)
         await state.set_state(PaymentForm.payment)
 
         if vip_until_date is None:
@@ -268,17 +268,17 @@ async def task_name(message: Message, state: FSMContext):
         await message.answer("❗️Название задачи не должно быть больше 50 символов\n\n✍️  Введите название задачи:")
         return
 
-    await add_task(user_id=message.from_user.id, task_description=message.text)
+    await create_task(user_id=message.from_user.id, task_description=message.text)
     await state.clear()
     await message.answer('✅ Задача была добавлена', reply_markup=markup.edit_menu)
 
 @router_1.callback_query(F.data.startswith('delete_'))
 async def confirm_task_removal(call: CallbackQuery):
     task_num = int(call.data.split('_')[1])
-    result = await delete_task(number_of_task=task_num, user_id=call.from_user.id)
+    result = await delete_task_by_index(number_of_task=task_num, user_id=call.from_user.id)
 
     if result is True:
-        tasks = await get_tasks(user_id=call.from_user.id)
+        tasks = await fetch_tasks(user_id=call.from_user.id)
 
         if not tasks:
             await call.message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
@@ -286,7 +286,7 @@ async def confirm_task_removal(call: CallbackQuery):
             task_pairs = [(key, value) for task in tasks for key, value in task.items()]
             await call.message.answer("Выберете задачу, которую вы хотите удалить:\n\n" + "\n".join(
                 [f"{i + 1}. {task[0]} - {task[1]}" for i, task in enumerate(task_pairs)]),
-                                 reply_markup=markup.inline_builder(num=await count_tasks(user_id=call.from_user.id),
+                                 reply_markup=markup.inline_builder(num=await count_user_tasks(user_id=call.from_user.id),
                                                                     emoji="🗑", action="delete"))
         await call.answer("Удалил")
 
@@ -296,10 +296,10 @@ async def confirm_task_removal(call: CallbackQuery):
 @router_1.callback_query(F.data.startswith('update_'))
 async def update_task_status(call: CallbackQuery):
     task_num = int(call.data.split('_')[1])
-    result = await edit_task_status(user_id=call.from_user.id, task_number=task_num)
+    result = await mark_task_completed(user_id=call.from_user.id, task_number=task_num)
 
     if result is True:
-        tasks = await get_tasks(user_id=call.from_user.id)
+        tasks = await fetch_tasks(user_id=call.from_user.id)
 
         if not tasks:
             await call.message.answer("❗️Ваш план теперь пуст", reply_markup=markup.get_menu(call.from_user.id))
@@ -311,7 +311,7 @@ async def update_task_status(call: CallbackQuery):
 
         await call.message.answer(
             "Выберите задачу, которую вы хотите выполнить:\n\n" + "\n".join(tasks_list), parse_mode=ParseMode.HTML,
-            reply_markup=markup.inline_builder(num=await count_tasks(user_id=call.from_user.id), emoji="✅", action="update"))
+            reply_markup=markup.inline_builder(num=await count_user_tasks(user_id=call.from_user.id), emoji="✅", action="update"))
         await call.answer("Обновил")
 
     elif result is False:
@@ -386,8 +386,8 @@ async def process_successful_payment(message: Message):
     else:
         return
 
-    await set_vip(user_id=message.from_user.id, until=vip_until)
-    vip_until_date = await get_vip_until(user_id=message.from_user.id)
+    await activate_vip(user_id=message.from_user.id, until=vip_until)
+    vip_until_date = await get_vip_expiration(user_id=message.from_user.id)
     await message.answer("🥳 Спасибо за поддержку бота. Все услуги предоставлены!"
                          f"\n\n<b><u>Ваша подписка теперь активна до {vip_until_date.strftime('%Y-%m-%d')}</u></b>",
                          parse_mode=ParseMode.HTML,

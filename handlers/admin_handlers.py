@@ -8,10 +8,10 @@ from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from keyboards import markup
 
 from database.postgres import (get_all_users, get_all_users_id, get_user_is_banned,
-                               is_user_in_database, is_vip, set_vip, get_all_vip_users,
+                               is_user_in_database, is_user_vip, activate_vip, get_all_vip_users,
                                get_all_not_vip_users)
 
-from database.mongo import get_all_tasks
+from database.mongo import fetch_all_tasks
 
 from utils import is_admin, PostForm, VipForm, check_and_notify_fsm_state, check_and_notify_registration
 
@@ -56,7 +56,7 @@ async def show_all_collections(message: Message, state: FSMContext):
         return
 
     if is_admin(message.from_user.id):
-        collections = await get_all_tasks()
+        collections = await fetch_all_tasks()
         await message.answer(text="\n".join(collections))
     else:
         await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))
@@ -152,7 +152,7 @@ async def post_text_regular(message: Message, state: FSMContext):
             elif data['until_date'] == '1y':
                 until_date = datetime.datetime.now() + datetime.timedelta(days=365)
 
-            await set_vip(user_id=int(data['user_name']), until=until_date)
+            await activate_vip(user_id=int(data['user_name']), until=until_date)
             await message.answer('🥳 Vip статус успешно подарен', reply_markup=markup.get_menu(message.from_user.id))
         else:
             await message.answer('⚠️ <b>Дата</b> введена не правильно', parse_mode=ParseMode.HTML,
@@ -199,7 +199,7 @@ async def is_post_confirm(callback_query: CallbackQuery, state: FSMContext):
 
         for (tg_id) in await get_all_users_id():
             if not await get_user_is_banned(user_id=tg_id):
-                if not await is_vip(user_id=tg_id):
+                if not await is_user_vip(user_id=tg_id):
                     await bot.send_photo(chat_id=tg_id, photo=data['picture'], caption=data['text'], parse_mode=ParseMode.MARKDOWN)
                     counter += 1
 
