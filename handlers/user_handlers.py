@@ -16,7 +16,7 @@ from database.postgres import (is_user_in_database, new_user_insert, is_vip, set
 from database.mongo import (get_tasks, count_tasks, add_task, edit_task_status,
                             delete_task, delete_all_tasks)
 
-from utils import PaymentForm, TaskForm, check_and_notify_fsm_state, check_and_notify_registration
+from utils import is_admin, PaymentForm, TaskForm, check_and_notify_fsm_state, check_and_notify_registration
 
 from config import ADMIN_ID
 
@@ -30,10 +30,7 @@ async def start(message: Message, state: FSMContext):
         return
 
     if await is_user_in_database(telegram_id=message.from_user.id):
-        if message.from_user.id == int(ADMIN_ID):
-            await message.answer("Вы уже зарегистрировались!", reply_markup=markup.get_menu(True))
-        else:
-            await message.answer("Вы уже зарегистрировались!", reply_markup=markup.get_menu(False))
+        await message.answer("Вы уже зарегистрировались!", reply_markup=markup.get_menu(message.from_user.id))
     else:
         await new_user_insert(user_id=message.from_user.id,
                               first_name=message.from_user.first_name,
@@ -41,7 +38,7 @@ async def start(message: Message, state: FSMContext):
                               last_name=message.from_user.last_name,
                               is_vip=True if message.from_user.id == int(ADMIN_ID) else False)
         await message.answer("👋 Привет, вы зарегистрировались, удачи в планировании!",
-                             reply_markup=markup.get_menu(True if message.from_user.id == int(ADMIN_ID) else False))
+                              reply_markup=markup.get_menu(message.from_user.id))
 
 @router_1.message(F.text.in_(['/profile']))
 async def profile(message: Message, state: FSMContext):
@@ -53,16 +50,11 @@ async def profile(message: Message, state: FSMContext):
 
     profile_data = await get_user_profile(user_id=message.from_user.id)
 
-    if message.from_user.id == int(ADMIN_ID):
-        await message.answer("<b>Твои данные для логина на сайте:</b>\n\n"
-                             f"👨‍💻 Логин: <code>{profile_data[0]}</code>\n"
-                             f"🔑 Пароль: <code>{profile_data[1]}</code>\n",
-                             parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(True))
-    else:
-        await message.answer("<b>Твои данные для логина на сайте:</b>\n\n"
-                             f"👨‍💻 Логин: <code>{profile_data[0]}</code>\n"
-                             f"🔑 Пароль: <code>{profile_data[1]}</code>\n",
-                             parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(False))
+    await message.answer("<b>Твои данные для логина на сайте:</b>\n\n"
+                        f"👨‍💻 Логин: <code>{profile_data[0]}</code>\n"
+                        f"🔑 Пароль: <code>{profile_data[1]}</code>\n",
+                        parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(message.from_user.id))
+
 
 @router_1.message(F.text.in_(['ℹ️Помощь по командам', '/help', '/info']))
 async def help(message: Message, state: FSMContext):
@@ -71,26 +63,17 @@ async def help(message: Message, state: FSMContext):
 
     if not await check_and_notify_fsm_state(message, state):
         return
-    if message.from_user.id == int(ADMIN_ID):
-        await message.answer("<b>Информация по командам</b>\n\n"
-                "/plan — <i>показ текущего плана</i>\n"
-                "/edit_plan — <i>редактирование плана</i>\n"
-                "/add_task — <i>добавить новую задачу</i>\n"
-                "/remove_task — <i>удалить некоторые задачи</i>\n"
-                "/pay - <i>oтключить все лимиты и поддержать бота</i>\n"
-                "/profile - <i>логин и пароль к сайту </i>\n",
-                             parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(True))
-    else:
-        await message.answer(
-                "<b>Информация по командам</b>\n\n"
-                "/plan — <i>показ текущего плана</i>\n"
-                "/edit_plan — <i>редактирование плана</i>\n"    
-                "/add_task — <i>добавить новую задачу</i>\n"
-                "/remove_task — <i>удалить некоторые задачи</i>\n"
-                "/clear_plan — <i>удалить все задачи</i>\n"
-                "/pay - <i>oтключить все лимиты и поддержать бота</i>\n"
-                "/profile - <i>логин и пароль к сайту </i>\n",
-                            parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(False))
+    
+    await message.answer(
+            "<b>Информация по командам</b>\n\n"
+            "/plan — <i>показ текущего плана</i>\n"
+            "/edit_plan — <i>редактирование плана</i>\n"    
+            "/add_task — <i>добавить новую задачу</i>\n"
+            "/remove_task — <i>удалить некоторые задачи</i>\n"
+            "/clear_plan — <i>удалить все задачи</i>\n"
+            "/pay - <i>oтключить все лимиты и поддержать бота</i>\n"
+            "/profile - <i>логин и пароль к сайту </i>\n",
+                        parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(message.from_user.id))
 
 @router_1.message(F.text.in_(['📋План', '/plan']))
 async def show_plan(message: Message, state: FSMContext):
@@ -102,20 +85,16 @@ async def show_plan(message: Message, state: FSMContext):
 
     tasks = await get_tasks(user_id=message.from_user.id)
     if not tasks:
-        if message.from_user.id == int(ADMIN_ID):
-            await message.answer("❗️Ваш план на сегодня пуст!", reply_markup=markup.get_menu(True))
-        else:
-            await message.answer("❗️Ваш план на сегодня пуст!", reply_markup=markup.get_menu(False))
+        await message.answer("❗️Ваш план на сегодня пуст!", reply_markup=markup.get_menu(message.from_user.id))
     else:
-        if await is_vip(user_id=message.from_user.id) and not message.from_user.id == int(ADMIN_ID):
+        if await is_vip(user_id=message.from_user.id) and not is_admin(message.from_user.id):
             is_still_vip = datetime.datetime.now() < await get_vip_until(message.from_user.id)
             if not is_still_vip:
                 await set_vip_off(user_id=message.from_user.id)
 
-        if await is_vip(user_id=message.from_user.id) or message.from_user.id == int(ADMIN_ID):
+        if await is_vip(user_id=message.from_user.id) or is_admin(message.from_user.id):
             completed_tasks = []
             not_completed_tasks = []
-            status = True if message.from_user.id == int(ADMIN_ID) else False
 
             for x in tasks:
                 if list(x.values())[0] == '✅':
@@ -137,7 +116,7 @@ async def show_plan(message: Message, state: FSMContext):
                 answer = "🗂 <b>Твой план:</b>\n\n" + "\n".join(
                     [f"{i + 1}. {list(task.keys())[0]} - {list(task.values())[0]}" for i, task in
                      enumerate(completed_tasks)])
-            await message.answer(text=answer, reply_markup=markup.get_menu(status), parse_mode=ParseMode.HTML)
+            await message.answer(text=answer, reply_markup=markup.get_menu(message.from_user.id), parse_mode=ParseMode.HTML)
         else:
             await message.answer(
                 "🗂 <b>Твой план:</b>\n\n" +
@@ -145,7 +124,7 @@ async def show_plan(message: Message, state: FSMContext):
                     [f"{i + 1}. {list(task.keys())[0]} — {list(task.values())[0]}" for
                      i, task in
                      enumerate(tasks)]),
-                reply_markup=markup.get_menu(False),
+                reply_markup=markup.get_menu(message.from_user.id),
                 parse_mode=ParseMode.HTML
             )
 
@@ -159,10 +138,7 @@ async def clear_plan(message: Message, state: FSMContext):
 
     res = await delete_all_tasks(user_id=message.from_user.id)
     if res is True:
-        if message.from_user.id == int(ADMIN_ID):
-            await message.answer("❗️Теперь ваш план пуст", reply_markup=markup.get_menu(True))
-        else:
-            await message.answer("❗️Теперь ваш план пуст", reply_markup=markup.get_menu(False))
+        await message.answer("❗️Теперь ваш план пуст", reply_markup=markup.get_menu(message.from_user.id))
     else:
         await message.answer("❗️План и так пуст", reply_markup=markup.edit_menu)
 
@@ -246,10 +222,7 @@ async def back_1(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == int(ADMIN_ID):
-        await message.answer('⚙️ Меню', reply_markup=markup.get_menu(True))
-    else:
-        await message.answer('⚙️ Меню', reply_markup=markup.get_menu(False))
+    await message.answer('⚙️ Меню', reply_markup=markup.get_menu(message.from_user.id))
 
 @router_2.message(Command('pay'))
 async def pay(message: Message, state: FSMContext):
@@ -259,8 +232,8 @@ async def pay(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == int(ADMIN_ID):
-        await message.answer("👨🏻‍💻 Ты и так админ", reply_markup=markup.get_menu(True))
+    if is_admin(message.from_user.id):
+        await message.answer("👨🏻‍💻 Ты и так админ", reply_markup=markup.get_menu(message.from_user.id))
     else:
         if await is_vip(user_id=message.from_user.id):
             is_still_vip = datetime.datetime.now() < await get_vip_until(message.from_user.id)
@@ -329,10 +302,7 @@ async def update_task_status(call: CallbackQuery):
         tasks = await get_tasks(user_id=call.from_user.id)
 
         if not tasks:
-            if call.from_user.id == int(ADMIN_ID):
-                await call.message.answer("❗️Ваш план теперь пуст", reply_markup=markup.get_menu(True))
-            else:
-                await call.message.answer("❗️Ваш план теперь пуст", reply_markup=markup.get_menu(False))
+            await call.message.answer("❗️Ваш план теперь пуст", reply_markup=markup.get_menu(call.from_user.id))
             return
         tasks_list = [
             f"{i + 1}. {list(task.keys())[0]} - <i>{list(task.values())[0]}</i>"
@@ -421,7 +391,7 @@ async def process_successful_payment(message: Message):
     await message.answer("🥳 Спасибо за поддержку бота. Все услуги предоставлены!"
                          f"\n\n<b><u>Ваша подписка теперь активна до {vip_until_date.strftime('%Y-%m-%d')}</u></b>",
                          parse_mode=ParseMode.HTML,
-                         reply_markup=markup.get_menu(False))
+                         reply_markup=markup.get_menu(message.from_user.id))
 
 @router_1.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER))
 async def user_blocked_bot_(event: ChatMemberUpdatedFilter):

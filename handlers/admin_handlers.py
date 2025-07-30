@@ -13,9 +13,9 @@ from database.postgres import (get_all_users, get_all_users_id, get_user_is_bann
 
 from database.mongo import get_all_tasks
 
-from utils import PostForm, VipForm, check_and_notify_fsm_state, check_and_notify_registration
+from utils import is_admin, PostForm, VipForm, check_and_notify_fsm_state, check_and_notify_registration
 
-from config import ADMIN_ID, BOT_TOKEN
+from config import BOT_TOKEN
 
 
 router = Router()
@@ -27,10 +27,10 @@ async def admin_panel(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == ADMIN_ID:
+    if is_admin(message.from_user.id):
         await message.answer("👨🏻‍💻 Админ панель активирована:", reply_markup=markup.admin_panel)
     else:
-        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
+        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))
 
 @router.message(F.text == '👥 Вывести пользователей')
 async def show_all_users(message: Message, state: FSMContext):
@@ -40,12 +40,12 @@ async def show_all_users(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == ADMIN_ID:
+    if is_admin(message.from_user.id):
         users = await get_all_users()
         users_data = [f"{i} - {x} - @{z} - {y}" for i, x, z, y in users]
         await message.answer(text="\n".join(users_data))
     else:
-        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
+        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))
 
 @router.message(F.text == '📋 Вывести все коллекции')
 async def show_all_collections(message: Message, state: FSMContext):
@@ -55,11 +55,11 @@ async def show_all_collections(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == ADMIN_ID:
+    if is_admin(message.from_user.id):
         collections = await get_all_tasks()
         await message.answer(text="\n".join(collections))
     else:
-        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
+        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))
 
 @router.message(F.text == '🪧 Создать пост рекламы')
 async def create_post_advertisement(message: Message, state: FSMContext):
@@ -69,11 +69,11 @@ async def create_post_advertisement(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == ADMIN_ID:
+    if is_admin(message.from_user.id):
         await message.answer("📖 Введите текст поста:", parse_mode=ParseMode.MARKDOWN, reply_markup=ReplyKeyboardRemove())
         await state.set_state(PostForm.text)
     else:
-        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
+        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))
 
 @router.message(F.text == 'ℹ️ Вывести кол. vip пользователей')
 async def show_vip_count(message: Message, state: FSMContext):
@@ -83,11 +83,11 @@ async def show_vip_count(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == ADMIN_ID:
+    if is_admin(message.from_user.id):
         vip_users = await get_all_vip_users()
         await message.answer(f"{len(vip_users)} vip пользователей", parse_mode=ParseMode.MARKDOWN)
     else:
-        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
+        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))
 
 @router.message(F.text == 'ℹ️ Вывести кол. не vip пользователей')
 async def show_non_vip_count(message: Message, state: FSMContext):
@@ -97,11 +97,11 @@ async def show_non_vip_count(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == ADMIN_ID:
+    if is_admin(message.from_user.id):
         not_vip_users = await get_all_not_vip_users()
         await message.answer(f"{len(not_vip_users)} не vip пользователей", parse_mode=ParseMode.MARKDOWN)
     else:
-        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
+        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))
 
 @router.message(F.text == '🎁 Подарить вип пользователю')
 async def gift_the_vip(message: Message, state: FSMContext):
@@ -111,12 +111,12 @@ async def gift_the_vip(message: Message, state: FSMContext):
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if message.from_user.id == ADMIN_ID:
+    if is_admin(message.from_user.id):
         await message.answer("🆔 Введите id пользователя:", parse_mode=ParseMode.MARKDOWN,
                              reply_markup=ReplyKeyboardRemove())
         await state.set_state(VipForm.user_name)
     else:
-        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
+        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))
 
 
 @router.message(VipForm.user_name, F.text)
@@ -138,7 +138,7 @@ async def post_text_regular(message: Message, state: FSMContext):
 
     if not await is_user_in_database(telegram_id=int(data['user_name'])):
         await message.answer("⚠️ Был введен <b>не правильный id</b>", parse_mode=ParseMode.HTML,
-                             reply_markup=markup.get_menu(True))
+                             reply_markup=markup.get_menu(message.from_user.id))
         await state.clear()
         return
     try:
@@ -153,13 +153,13 @@ async def post_text_regular(message: Message, state: FSMContext):
                 until_date = datetime.datetime.now() + datetime.timedelta(days=365)
 
             await set_vip(user_id=int(data['user_name']), until=until_date)
-            await message.answer('🥳 Vip статус успешно подарен', reply_markup=markup.get_menu(True))
+            await message.answer('🥳 Vip статус успешно подарен', reply_markup=markup.get_menu(message.from_user.id))
         else:
             await message.answer('⚠️ <b>Дата</b> введена не правильно', parse_mode=ParseMode.HTML,
-                                 reply_markup=markup.get_menu(True))
+                                 reply_markup=markup.get_menu(message.from_user.id))
     except Exception as ex:
         await message.answer(f'⚠️ <b>Не получилось подарить vip, ошибка</b> - {ex}', parse_mode=ParseMode.HTML,
-                             reply_markup=markup.get_menu(True))
+                             reply_markup=markup.get_menu(message.from_user.id))
     finally:
         await state.clear()
 
@@ -217,7 +217,4 @@ async def error(message: Message):
     if not await check_and_notify_registration(message):
         return
 
-    if message.from_user.id == ADMIN_ID:
-        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(True))
-    else:
-        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(False))
+    await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))
