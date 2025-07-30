@@ -1,6 +1,7 @@
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import ReplyKeyboardRemove
 
+from config import ADMIN_ID
 from database.postgres import is_user_in_database
 
 
@@ -19,6 +20,9 @@ class PaymentForm(StatesGroup):
 class VipForm(StatesGroup):
     user_name = State()
     date= State()
+
+def is_admin(user_id: int) -> bool:
+    return user_id == ADMIN_ID
 
 async def check_and_notify_registration(message) -> bool:
     if not await is_user_in_database(telegram_id=message.from_user.id):
