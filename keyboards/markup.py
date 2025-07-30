@@ -2,8 +2,9 @@ from aiogram.types import (InlineKeyboardMarkup, KeyboardButton,
                            ReplyKeyboardMarkup)
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 
+from config import ADMIN_ID
 
-def get_menu(is_admin: bool):
+def get_menu(user_id: int):
     buttons = [
         [
             KeyboardButton(text="📋План"),
@@ -16,7 +17,7 @@ def get_menu(is_admin: bool):
         ],
     ]
 
-    if is_admin:
+    if user_id == ADMIN_ID:
         buttons.append([KeyboardButton(text="➡️ Админ панель")])
 
     return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True, input_field_placeholder="Выберите вариант.. ")
