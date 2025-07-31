@@ -107,4 +107,3 @@ Make sure your PostgreSQL is accessible to the container.
 ## 📈 Planned Features
 
 - ⏰ Task reminders  
-- 🌐 Multi-language support  
