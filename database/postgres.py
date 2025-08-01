@@ -41,12 +41,7 @@ async def create_user(user_id: int, first_name: str, last_name: str, username: s
                 INSERT INTO users (telegram_id, first_name, last_name, username, is_vip, joined_at, unique_key)
                 VALUES ($1, $2, $3, $4, $5, $6, $7)
             ''', user_id, first_name, last_name, username, is_vip, datetime.datetime.now(), unique_key)
-
-async def get_user_is_banned(user_id: int):
-    async with pool.acquire() as conn:
-        result = await conn.fetchval('SELECT is_banned FROM users WHERE telegram_id = $1', user_id)
-        return result
-
+        
 async def user_blocked_bot(user_id: int):
     async with pool.acquire() as conn:
         conn.execute('UPDATE users SET is_banned = TRUE WHERE telegram_id = $1', user_id)
@@ -63,24 +58,34 @@ async def deactivate_vip(user_id: int):
     async with pool.acquire() as conn:
         await conn.execute('UPDATE users SET is_vip = FALSE, vip_until = NULL WHERE telegram_id = $1', user_id)
 
+async def get_user_is_banned(user_id: int):
+    async with pool.acquire() as conn:
+        result = await conn.fetchval('SELECT is_banned FROM users WHERE telegram_id = $1', user_id)
+        return result
+    
+async def is_user_vip(user_id: int):
+    async with pool.acquire() as conn:
+        result = await conn.fetchval('SELECT is_vip FROM users WHERE telegram_id = $1', user_id)
+        return result
+    
+async def get_vip_expiration(user_id: int):
+    async with pool.acquire() as conn:
+        result = await conn.fetchval('SELECT vip_until FROM users WHERE telegram_id = $1', user_id)
+        return result
+    
+async def get_user_profile(user_id: int):
+    async with pool.acquire() as conn:
+        result = await conn.fetchrow('SELECT telegram_id, unique_key FROM users WHERE telegram_id = $1', user_id)
+        return result
+    
 async def get_all_users_id():
     async with pool.acquire() as conn:
         records = await conn.fetch('SELECT telegram_id FROM users')
         return [record['telegram_id'] for record in records]
 
-async def is_user_vip(user_id: int):
-    async with pool.acquire() as conn:
-        result = await conn.fetchval('SELECT is_vip FROM users WHERE telegram_id = $1', user_id)
-        return result
-
 async def get_all_users():
     async with pool.acquire() as conn:
         result = await conn.fetch('SELECT telegram_id, first_name, username, joined_at FROM users')
-        return result
-
-async def get_vip_expiration(user_id: int):
-    async with pool.acquire() as conn:
-        result = await conn.fetchval('SELECT vip_until FROM users WHERE telegram_id = $1', user_id)
         return result
 
 async def get_all_vip_users():
@@ -91,9 +96,4 @@ async def get_all_vip_users():
 async def get_all_not_vip_users():
     async with pool.acquire() as conn:
         result = await conn.fetch('SELECT telegram_id FROM users WHERE is_vip = FALSE')
-        return result
-
-async def get_user_profile(user_id: int):
-    async with pool.acquire() as conn:
-        result = await conn.fetchrow('SELECT telegram_id, unique_key FROM users WHERE telegram_id = $1', user_id)
         return result
