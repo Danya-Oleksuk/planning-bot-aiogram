@@ -231,11 +231,14 @@ async def edit_task_status_(message: Message, state: FSMContext):
     if not tasks:
         await message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
     else:
-        task_pairs = [(key, value) for task in tasks for key, value in task.items()]
-        await message.answer("Выберете задачу, которую вы хотите выполнить:\n\n" + "\n".join(
-            [f"{i + 1}. {task[0]} - {task[1]}" for i, task in enumerate(task_pairs)]),
-                             reply_markup=markup.inline_builder(num=await count_user_tasks(user_id=message.from_user.id),
-                                                                emoji="✅", action="update"))
+        task_pairs = [(key, value) for task in tasks for key, value in task.items() if value == "❌"]
+        if not task_pairs:
+            await message.answer("✅ Все задачи выполнены!")
+        else:
+            await message.answer("Выберете задачу, которую вы хотите выполнить:\n\n" + "\n".join(
+                [f"{i + 1}. {task[0]} - {task[1]}" for i, task in enumerate(task_pairs)]),
+                                reply_markup=markup.inline_builder(num=await count_user_tasks(user_id=message.from_user.id),
+                                                                    emoji="✅", action="update"))
 
 @router_2.message(F.text.in_(['⬅️ Назад', ]))
 async def back_1(message: Message, state: FSMContext):
