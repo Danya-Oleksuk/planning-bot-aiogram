@@ -19,8 +19,6 @@ from database.mongo import (fetch_tasks, count_user_tasks, create_task, mark_tas
 
 from utils import is_admin, PaymentForm, TaskForm, check_and_notify_fsm_state, check_and_notify_registration
 
-from config import ADMIN_ID
-
 
 router_1 = Router()
 router_2 = Router()
@@ -37,7 +35,7 @@ async def start(message: Message, state: FSMContext):
                               first_name=message.from_user.first_name,
                               username=message.from_user.username,
                               last_name=message.from_user.last_name,
-                              is_vip=True if message.from_user.id == int(ADMIN_ID) else False)
+                              is_vip=True if is_admin(message.from_user.id) else False)
         await message.answer("👋 Привет, вы зарегистрировались, удачи в планировании!",
                               reply_markup=markup.get_menu(message.from_user.id))
 
@@ -186,7 +184,7 @@ async def create_task_(message: Message, state: FSMContext):
     if await count_user_tasks(user_id=message.from_user.id) < 3:
         await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
         await state.set_state(TaskForm.task_name)
-    elif message.from_user.id == int(ADMIN_ID):
+    elif is_admin(message.from_user.id):
         await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
         await state.set_state(TaskForm.task_name)
     elif await is_user_vip(user_id=message.from_user.id):
