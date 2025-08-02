@@ -21,7 +21,8 @@ Made by [Danya-Oleksuk](https://github.com/Danya-Oleksuk), this bot helps you st
 - 🗑️ Instantly remove tasks  
 - 🔁 Status updates like "done" or "in progress"  
 - 👮 Admin panel with user management
-- 📊 View bot and user statistics
+- 📊 As admin view bot and user statistics
+- 📊 As user view your own statistics
 - 📢 Broadcast messages (ads or updates)
 - 🛡️ Anti-spam middleware for callback protection
 - 🐘 PostgreSQL integration for persistent data storage
