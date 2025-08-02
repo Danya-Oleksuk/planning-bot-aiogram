@@ -11,7 +11,8 @@ from aiogram.types import (CallbackQuery, LabeledPrice, Message,
 from keyboards import markup
 
 from database.postgres import (is_user_in_database, create_user, is_user_vip, activate_vip, deactivate_vip, 
-                               get_vip_expiration, user_blocked_bot, user_unblocked_bot, get_user_profile)
+                               get_vip_expiration, user_blocked_bot, user_unblocked_bot, get_user_profile,
+                               get_user_stats, increment_total_tasks, increment_completed_tasks)
 
 from database.mongo import (fetch_tasks, count_user_tasks, create_task, mark_task_completed,
                             delete_task_by_index, delete_all_tasks)
@@ -54,7 +55,28 @@ async def profile(message: Message, state: FSMContext):
                         f"👨‍💻 Логин: <code>{profile_data[0]}</code>\n"
                         f"🔑 Пароль: <code>{profile_data[1]}</code>\n",
                         parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(message.from_user.id))
+    
+@router_1.message(Command('statistic'))
+async def get_user_statss(message: Message, state: FSMContext):
+    if not await check_and_notify_registration(message):
+        return
 
+    if not await check_and_notify_fsm_state(message, state):
+        return
+    
+    user_stat = await get_user_stats(user_id=message.from_user.id)
+
+    if user_stat is None:
+        await message.answer(
+        "😔 <b>У вас пока нет статистики.</b>\n\n"
+        "Добавьте первую задачу с помощью команды <b>/add_task</b> 💪",
+        reply_markup=markup.get_menu(message.from_user.id), parse_mode=ParseMode.HTML)
+    else:
+        await message.answer(
+        f"<b>📊 Ваша статистика</b>\n\n"
+        f"📝 <b>Всего задач добавлено:</b> <u>{user_stat['total_tasks']}</u>\n"
+        f"✅ <b>Всего задач выполнено:</b> <u>{user_stat['completed_tasks']}</u>",
+        reply_markup=markup.get_menu(message.from_user.id), parse_mode=ParseMode.HTML)
 
 @router_1.message(F.text.in_(['ℹ️Помощь по командам', '/help', '/info']))
 async def help(message: Message, state: FSMContext):
@@ -269,6 +291,7 @@ async def task_name(message: Message, state: FSMContext):
         return
 
     await create_task(user_id=message.from_user.id, task_description=message.text)
+    await increment_total_tasks(user_id=message.from_user.id)
     await state.clear()
     await message.answer('✅ Задача была добавлена', reply_markup=markup.edit_menu)
 
@@ -297,6 +320,7 @@ async def confirm_task_removal(call: CallbackQuery):
 async def update_task_status(call: CallbackQuery):
     task_num = int(call.data.split('_')[1])
     result = await mark_task_completed(user_id=call.from_user.id, task_number=task_num)
+    await increment_completed_tasks(user_id=call.from_user.id)
 
     if result is True:
         tasks = await fetch_tasks(user_id=call.from_user.id)
