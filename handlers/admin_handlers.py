@@ -132,6 +132,8 @@ async def post_text_vip(message: Message, state: FSMContext):
 async def post_text_regular(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
+    
+    bot = Bot(token=BOT_TOKEN)
 
     await state.update_data(until_date=message.md_text)
     data = await state.get_data()
@@ -153,7 +155,11 @@ async def post_text_regular(message: Message, state: FSMContext):
                 until_date = datetime.datetime.now() + datetime.timedelta(days=365)
 
             await activate_vip(user_id=int(data['user_name']), until=until_date)
+
             await message.answer('🥳 Vip статус успешно подарен', reply_markup=markup.get_menu(message.from_user.id))
+            
+            await bot.send_message(int(data['user_name']), f"🎉 Ура! Вам подарили VIP статус до <b><u>{until_date.strftime('%Y-%m-%d')}</u></b>! 🎁", 
+                                   parse_mode=ParseMode.HTML)
         else:
             await message.answer('⚠️ <b>Дата</b> введена не правильно', parse_mode=ParseMode.HTML,
                                  reply_markup=markup.get_menu(message.from_user.id))
@@ -191,9 +197,8 @@ async def post_picture(message: Message, state: FSMContext):
 async def is_post_confirm(callback_query: CallbackQuery, state: FSMContext):
 
     if callback_query.data == 'post_confirm':
-        bot_token = BOT_TOKEN
 
-        bot = Bot(token=bot_token)
+        bot = Bot(token=BOT_TOKEN)
         counter = 0
         data = await state.get_data()
 
