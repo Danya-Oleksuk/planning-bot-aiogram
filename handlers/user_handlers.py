@@ -94,6 +94,7 @@ async def help(message: Message, state: FSMContext):
             "/remove_task — <i>удалить некоторые задачи</i>\n"
             "/clear_plan — <i>удалить все задачи</i>\n"
             "/pay - <i>oтключить все лимиты и поддержать бота</i>\n"
+            "/statistic — <i>статистика вашего аккаунта</i>\n" 
             "/profile - <i>логин и пароль к сайту </i>\n",
                         parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(message.from_user.id))
 
@@ -318,7 +319,7 @@ async def confirm_task_removal(call: CallbackQuery):
         await call.answer("Удалил")
 
     elif result is False:
-        await call.answer("Что то пошло не так!")
+        await call.answer("😳 Что то пошло не так!")
 
 @router_1.callback_query(F.data.startswith('update_'))
 async def update_task_status(call: CallbackQuery):
@@ -344,7 +345,7 @@ async def update_task_status(call: CallbackQuery):
             await call.answer("✅ Выполнил")
 
     elif result is False:
-        await call.answer("Что-то пошло не так!")
+        await call.answer("😳 Что-то пошло не так!")
 
 @router_1.callback_query(F.data == 'vip_1_week_access')
 async def vip_1_week_access_(call: CallbackQuery, state: FSMContext):
