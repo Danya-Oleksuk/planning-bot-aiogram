@@ -231,14 +231,15 @@ async def edit_task_status_(message: Message, state: FSMContext):
     if not tasks:
         await message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
     else:
-        task_pairs = [(key, value) for task in tasks for key, value in task.items() if value == "❌"]
-        if not task_pairs:
+        tasks = [f"{i + 1}. {task_id} - {status}" for i, task in enumerate(tasks) for task_id, status in task.items() if status == '❌' ]
+        if not tasks:
             await message.answer("✅ Все задачи выполнены!")
         else:
             await message.answer("Выберете задачу, которую вы хотите выполнить:\n\n" + "\n".join(
-                [f"{i + 1}. {task[0]} - {task[1]}" for i, task in enumerate(task_pairs)]),
-                                reply_markup=markup.inline_builder(num=await count_user_tasks(user_id=message.from_user.id),
-                                                                    emoji="✅", action="update"))
+                                        [task for task in tasks]), 
+                                        reply_markup=markup.inline_builder(num=await count_user_tasks(user_id=message.from_user.id), 
+                                        emoji="✅", 
+                                        action="update"))
 
 @router_2.message(F.text.in_(['⬅️ Назад', ]))
 async def back_1(message: Message, state: FSMContext):
@@ -331,15 +332,16 @@ async def update_task_status(call: CallbackQuery):
         if not tasks:
             await call.message.answer("❗️Ваш план теперь пуст", reply_markup=markup.get_menu(call.from_user.id))
             return
-        tasks_list = [
-            f"{i + 1}. {list(task.keys())[0]} - <i>{list(task.values())[0]}</i>"
-            for i, task in enumerate(tasks)
-        ]
-
-        await call.message.answer(
-            "Выберите задачу, которую вы хотите выполнить:\n\n" + "\n".join(tasks_list), parse_mode=ParseMode.HTML,
-            reply_markup=markup.inline_builder(num=await count_user_tasks(user_id=call.from_user.id), emoji="✅", action="update"))
-        await call.answer("Обновил")
+        
+        tasks = [f"{i + 1}. {task_id} - {status}" for i, task in enumerate(tasks) for task_id, status in task.items() if status == '❌' ]
+        if not tasks:
+            await call.message.answer("✅ Все задачи выполнены!")
+            await call.answer("🎉 Ура! Все задачи выполнены!")
+        else:
+            await call.message.answer(
+                "Выберите задачу, которую вы хотите выполнить:\n\n" + "\n".join([task for task in tasks]), parse_mode=ParseMode.HTML,
+                reply_markup=markup.inline_builder(num=await count_user_tasks(user_id=call.from_user.id), emoji="✅", action="update"))
+            await call.answer("✅ Выполнил")
 
     elif result is False:
         await call.answer("Что-то пошло не так!")
