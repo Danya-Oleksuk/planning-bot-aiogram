@@ -7,13 +7,13 @@ from config import ADMIN_ID
 def get_menu(user_id: int):
     buttons = [
         [
-            KeyboardButton(text="📋План"),
+            KeyboardButton(text="📋 План"),
         ],
         [
-            KeyboardButton(text="📝Редактировать план"),
+            KeyboardButton(text="📝 Редактировать план"),
         ],
         [
-            KeyboardButton(text="ℹ️Помощь по командам"),
+            KeyboardButton(text="ℹ️ Помощь по командам"),
         ],
     ]
 
