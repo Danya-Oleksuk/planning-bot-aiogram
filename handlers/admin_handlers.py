@@ -124,10 +124,21 @@ async def post_text_vip(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
 
-    await state.update_data(user_name=message.md_text)
-    await message.answer("✔️ Юзер добавлен\n\n📅 Введите дату vip статуса (1w/1m/1y):")
-    await state.set_state(VipForm.date)
+    try:
+        user_id = int(message.md_text)
 
+        if not await is_user_in_database(telegram_id=user_id):
+            raise ValueError
+
+        await state.update_data(user_name=message.md_text)
+        await message.answer("✔️ Юзер добавлен\n\n📅 Введите дату vip статуса (1w/1m/1y/forever):")
+        await state.set_state(VipForm.date)
+    except ValueError:
+        await message.answer("⚠️ Был введен <b>не правильный id</b>", parse_mode=ParseMode.HTML, reply_markup=markup.admin_panel)
+        await state.clear()
+        return
+
+    
 @router.message(VipForm.date, F.text)
 async def post_text_regular(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
@@ -138,34 +149,41 @@ async def post_text_regular(message: Message, state: FSMContext):
     await state.update_data(until_date=message.md_text)
     data = await state.get_data()
 
-    if not await is_user_in_database(telegram_id=int(data['user_name'])):
-        await message.answer("⚠️ Был введен <b>не правильный id</b>", parse_mode=ParseMode.HTML,
-                             reply_markup=markup.get_menu(message.from_user.id))
-        await state.clear()
-        return
     try:
-        if data['until_date'] in ('1w', '1m', '1y'):
+        if data['until_date'] in ('1w', '1m', '1y', 'forever'):
             until_date = None
+            period_str = ''
 
             if data['until_date'] == '1w':
                 until_date = datetime.datetime.now() + datetime.timedelta(days=7)
+                period_str = 'на неделю'
             elif data['until_date'] == '1m':
                 until_date = datetime.datetime.now() + datetime.timedelta(days=30)
+                period_str = 'на месяц'
             elif data['until_date'] == '1y':
                 until_date = datetime.datetime.now() + datetime.timedelta(days=365)
+                period_str = 'на год'
+            elif data['until_date'] == 'forever':
+                until_date = datetime.datetime.now() + datetime.timedelta(days=9999)
+                period_str = 'на всегда'
+
 
             await activate_vip(user_id=int(data['user_name']), until=until_date)
 
             await message.answer('🥳 Vip статус успешно подарен', reply_markup=markup.get_menu(message.from_user.id))
-            
-            await bot.send_message(int(data['user_name']), f"🎉 Ура! Вам подарили VIP статус до <b><u>{until_date.strftime('%Y-%m-%d')}</u></b>! 🎁", 
-                                   parse_mode=ParseMode.HTML)
+                
+            await bot.send_message(
+                    int(data['user_name']),
+                    f"🎉 <b>Поздравляем!</b>\n\n"
+                    f"Вам был подарен <b>VIP статус</b> {period_str} ✨\n"
+                    f"Статус действителен до <b><u>{'неограниченно' if until_date > datetime.datetime.now() + datetime.timedelta(days=999) else until_date.strftime('%Y-%m-%d')}</u></b> 🎁\n\n"
+                    f"Наслаждайтесь привилегиями! 💎",
+                    parse_mode=ParseMode.HTML
+                )
         else:
-            await message.answer('⚠️ <b>Дата</b> введена не правильно', parse_mode=ParseMode.HTML,
-                                 reply_markup=markup.get_menu(message.from_user.id))
+            await message.answer('⚠️ <b>Дата</b> введена не правильно', parse_mode=ParseMode.HTML, reply_markup=markup.admin_panel)
     except Exception as ex:
-        await message.answer(f'⚠️ <b>Не получилось подарить vip, ошибка</b> - {ex}', parse_mode=ParseMode.HTML,
-                             reply_markup=markup.get_menu(message.from_user.id))
+        await message.answer(f'⚠️ <b>Не получилось подарить vip, ошибка</b> - {ex}', parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(message.from_user.id))
     finally:
         await state.clear()
 
