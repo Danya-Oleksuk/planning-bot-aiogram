@@ -127,14 +127,14 @@ async def post_text_vip(message: Message, state: FSMContext):
     try:
         user_id = int(message.md_text)
 
-        if not await is_user_in_database(telegram_id=user_id):
+        if not await is_user_in_database(telegram_id=user_id) or await get_user_is_banned(user_id):
             raise ValueError
 
         await state.update_data(user_name=message.md_text)
         await message.answer("✔️ Юзер добавлен\n\n📅 Введите дату vip статуса (1w/1m/1y/forever):")
         await state.set_state(VipForm.date)
     except ValueError:
-        await message.answer("⚠️ Был введен <b>не правильный id</b>", parse_mode=ParseMode.HTML, reply_markup=markup.admin_panel)
+        await message.answer("⚠️ Был введен <b>не правильный id</b> или <b>юзер забанил бота</b>", parse_mode=ParseMode.HTML, reply_markup=markup.admin_panel)
         await state.clear()
         return
 
