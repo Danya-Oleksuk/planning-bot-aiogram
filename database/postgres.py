@@ -91,8 +91,8 @@ async def increment_completed_tasks(user_id: int):
                     
 async def user_blocked_bot(user_id: int):
     async with pool.acquire() as conn:
-        conn.execute('UPDATE users SET is_banned = TRUE WHERE telegram_id = $1', user_id)
-
+        await conn.execute('UPDATE users SET is_banned = TRUE WHERE telegram_id = $1', user_id)
+        
 async def user_unblocked_bot(user_id: int):
     async with pool.acquire() as conn:
         await conn.execute('UPDATE users SET is_banned = FALSE WHERE telegram_id = $1', user_id)
