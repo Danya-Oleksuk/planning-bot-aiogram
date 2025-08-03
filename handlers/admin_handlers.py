@@ -42,7 +42,11 @@ async def show_all_users(message: Message, state: FSMContext):
 
     if is_admin(message.from_user.id):
         users = await get_all_users()
-        users_data = [f"{i} - {x} - @{z} - {y}" for i, x, z, y in users]
+        users_data = [
+            f"{i} - {x} - @{z} - {y.strftime('%Y-%m-%d %H:%M:%S')}" + (f" - BANNED" if b else "")
+            for i, x, z, y, b in users
+        ]
+
         await message.answer(text="\n".join(users_data))
     else:
         await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))

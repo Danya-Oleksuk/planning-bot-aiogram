@@ -132,7 +132,7 @@ async def get_all_users_id():
 
 async def get_all_users():
     async with pool.acquire() as conn:
-        result = await conn.fetch('SELECT telegram_id, first_name, username, joined_at FROM users')
+        result = await conn.fetch('SELECT telegram_id, first_name, username, joined_at, is_banned FROM users')
         return result
 
 async def get_all_vip_users():
