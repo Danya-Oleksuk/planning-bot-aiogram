@@ -13,6 +13,7 @@ async def initiate_pool():
 
 async def create_telegram_bot_db():
     conn = await asyncpg.connect(**DB_CONFIG)
+
     await conn.execute('''
             CREATE TABLE IF NOT EXISTS users (
                 id SERIAL PRIMARY KEY,
@@ -20,14 +21,21 @@ async def create_telegram_bot_db():
                 first_name TEXT,
                 last_name TEXT,
                 username TEXT,
-                is_vip BOOLEAN DEFAULT FALSE,
-                vip_until TIMESTAMP DEFAULT NULL,
                 is_banned BOOLEAN DEFAULT FALSE,
                 joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 unique_key TEXT UNIQUE 
             ) 
         ''')
     
+    await conn.execute('''
+        CREATE TABLE IF NOT EXISTS vip_status (
+            user_id BIGINT REFERENCES users(telegram_id) ON DELETE CASCADE,
+            is_vip BOOLEAN DEFAULT FALSE,
+            vip_until TIMESTAMP DEFAULT NULL,
+            PRIMARY KEY (user_id)
+        )
+    ''')
+
     await conn.execute('''
         CREATE TABLE IF NOT EXISTS user_stats (
             id SERIAL PRIMARY KEY,
@@ -48,9 +56,15 @@ async def create_user(user_id: int, first_name: str, last_name: str, username: s
 
     async with pool.acquire() as conn:
         await conn.execute('''
-                INSERT INTO users (telegram_id, first_name, last_name, username, is_vip, joined_at, unique_key)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
-            ''', user_id, first_name, last_name, username, is_vip, datetime.datetime.now(), unique_key)
+                INSERT INTO users (telegram_id, first_name, last_name, username, joined_at, unique_key)
+                VALUES ($1, $2, $3, $4, $5, $6)
+            ''', user_id, first_name, last_name, username, datetime.datetime.now(), unique_key)
+        
+
+        await conn.execute('''
+            INSERT INTO vip_status (user_id, is_vip, vip_until)
+            VALUES ($1, $2, $3)
+        ''', user_id, is_vip, None)
 
 async def get_user_stats(user_id: int):
     async with pool.acquire() as conn:
@@ -85,11 +99,11 @@ async def user_unblocked_bot(user_id: int):
 
 async def activate_vip(user_id: int, until: datetime.datetime):
     async with pool.acquire() as conn:
-        await conn.execute('UPDATE users SET is_vip = TRUE, vip_until = $1 WHERE telegram_id = $2', until, user_id)
+        await conn.execute('UPDATE vip_status SET is_vip = TRUE, vip_until = $1 WHERE user_id = $2', until, user_id)
 
 async def deactivate_vip(user_id: int):
     async with pool.acquire() as conn:
-        await conn.execute('UPDATE users SET is_vip = FALSE, vip_until = NULL WHERE telegram_id = $1', user_id)
+        await conn.execute('UPDATE vip_status SET is_vip = FALSE, vip_until = NULL WHERE user_id = $1', user_id)
 
 async def get_user_is_banned(user_id: int):
     async with pool.acquire() as conn:
@@ -98,12 +112,12 @@ async def get_user_is_banned(user_id: int):
     
 async def is_user_vip(user_id: int):
     async with pool.acquire() as conn:
-        result = await conn.fetchval('SELECT is_vip FROM users WHERE telegram_id = $1', user_id)
+        result = await conn.fetchval('SELECT is_vip FROM vip_status WHERE user_id = $1', user_id)
         return result
     
 async def get_vip_expiration(user_id: int):
     async with pool.acquire() as conn:
-        result = await conn.fetchval('SELECT vip_until FROM users WHERE telegram_id = $1', user_id)
+        result = await conn.fetchval('SELECT vip_until FROM vip_status WHERE user_id = $1', user_id)
         return result
     
 async def get_user_profile(user_id: int):
@@ -123,10 +137,10 @@ async def get_all_users():
 
 async def get_all_vip_users():
     async with pool.acquire() as conn:
-        result = await conn.fetch('SELECT telegram_id FROM users WHERE is_vip = TRUE')
+        result = await conn.fetch('SELECT user_id FROM vip_status WHERE is_vip = TRUE')
         return result
 
 async def get_all_not_vip_users():
     async with pool.acquire() as conn:
-        result = await conn.fetch('SELECT telegram_id FROM users WHERE is_vip = FALSE')
+        result = await conn.fetch('SELECT user_id FROM vip_status WHERE is_vip = FALSE')
         return result
