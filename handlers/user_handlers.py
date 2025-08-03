@@ -260,30 +260,27 @@ async def pay(message: Message, state: FSMContext):
     if is_admin(message.from_user.id):
         await message.answer("👨🏻‍💻 Ты и так админ", reply_markup=markup.get_menu(message.from_user.id))
     else:
-        if await is_user_vip(user_id=message.from_user.id):
-            is_still_vip = datetime.datetime.now() < await get_vip_expiration(message.from_user.id)
-            if not is_still_vip:
-                await deactivate_vip(user_id=message.from_user.id)
-
         vip_until_date = await get_vip_expiration(user_id=message.from_user.id)
         await state.set_state(PaymentForm.payment)
 
         if vip_until_date is None:
-            await message.answer("<b>Приобретая премиум, вы открываете для себя расширенные возможности:</b>"
-                                 "\n\n📌 <i>Отсутствие лимита задач</i>"
-                                 "\n📌<i> Сортировка задач по выполнению</i>"
-                                 "\n📌 <i>Отсутствие рекламы</i>"
-                                 "\n📌 <i>Поддержка бота</i>"
-                                 "\n\n<i>Выберите подходящий для вас срок подписки:</i>", parse_mode=ParseMode.HTML, reply_markup=markup.vip_menu)
+            await message.answer("<b>Приобретая премиум, вы открываете:</b>"
+                                "\n📌 <i>Отсутствие лимита задач</i>"
+                                "\n📌 <i>Сортировку задач по выполнению</i>"
+                                "\n📌 <i>Поддержку бота и отсутствие рекламы</i>"
+                                "\n\n<i>Выберите срок подписки:</i>", 
+                                parse_mode=ParseMode.HTML, reply_markup=markup.vip_menu)
         else:
-            await message.answer(f"<b><u>Ваша подписка еще активна до {vip_until_date.strftime('%Y-%m-%d')}\n\n</u></b>"
-                                 "<b>Приобретая премиум, вы открываете для себя расширенные возможности:</b>"
-                                 "\n\n📌 <i>Отсутствие лимита задач</i>"
-                                 "\n📌 <i>Сортировка задач по выполнению</i>"
-                                 "\n📌 <i>Отсутствие рекламы</i>"
-                                 "\n📌 <i>Поддержка бота</i>"
-                                 "\n\n<i>Выберите подходящий для вас срок подписки:</i>", parse_mode=ParseMode.HTML,
-                                 reply_markup=markup.vip_menu)
+            if vip_until_date > datetime.datetime.now() + datetime.timedelta(days=999):
+                await message.answer("<b>Ваша подписка активна навсегда ✅</b>"
+                                    "\n\n📌 <i>Вы открыли доступ ко всем функциям!</i>"
+                                    "\n\n<i>Хотите поддержать проект дополнительно?</i>", 
+                                    parse_mode=ParseMode.HTML, reply_markup=markup.vip_menu)
+            elif datetime.datetime.now() < vip_until_date:
+                await message.answer(f"<b><u>Ваша подписка еще активна до {vip_until_date.strftime('%Y-%m-%d')}</u></b>"
+                                    "\n\n📌 <i>Вы открыли доступ ко всем функциям!</i>"
+                                    "\n\n<i>Хотите поддержать проект дополнительно или продлить?</i>", 
+                                    parse_mode=ParseMode.HTML, reply_markup=markup.vip_menu)
 
 @router_1.message(TaskForm.task_name)
 async def task_name(message: Message, state: FSMContext):
@@ -415,9 +412,9 @@ async def process_successful_payment(message: Message):
         return
 
     await activate_vip(user_id=message.from_user.id, until=vip_until)
-    vip_until_date = await get_vip_expiration(user_id=message.from_user.id)
+
     await message.answer("🥳 Спасибо за поддержку бота. Все услуги предоставлены!"
-                         f"\n\n<b><u>Ваша подписка теперь активна до {vip_until_date.strftime('%Y-%m-%d')}</u></b>",
+                         f"\n\n<b><u>Ваша подписка теперь активна до {vip_until.strftime('%Y-%m-%d')}</u></b>",
                          parse_mode=ParseMode.HTML,
                          reply_markup=markup.get_menu(message.from_user.id))
 
