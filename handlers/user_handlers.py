@@ -76,7 +76,7 @@ async def get_user_statss(message: Message, state: FSMContext):
         f"✅ <b>Всего задач выполнено:</b> <u>{user_stat['completed_tasks']}</u>",
         reply_markup=markup.get_menu(message.from_user.id), parse_mode=ParseMode.HTML)
 
-@router_1.message(F.text.in_(['ℹ️Помощь по командам', '/help', '/info']))
+@router_1.message(F.text.in_(['ℹ️ Помощь по командам', '/help', '/info']))
 async def help(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
@@ -96,7 +96,7 @@ async def help(message: Message, state: FSMContext):
             "/profile - <i>логин и пароль к сайту </i>\n",
                         parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(message.from_user.id))
 
-@router_1.message(F.text.in_(['📋План', '/plan']))
+@router_1.message(F.text.in_(['📋 План', '/plan']))
 async def show_plan(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
@@ -163,7 +163,7 @@ async def clear_plan(message: Message, state: FSMContext):
     else:
         await message.answer("❗️План и так пуст", reply_markup=markup.edit_menu)
 
-@router_2.message(F.text.in_(['📝Редактировать план', '/edit_plan']))
+@router_2.message(F.text.in_(['📝 Редактировать план', '/edit_plan']))
 async def edit_plan(message: Message, state: FSMContext):
     if not await check_and_notify_registration(message):
         return
