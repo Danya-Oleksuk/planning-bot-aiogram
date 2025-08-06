@@ -9,6 +9,7 @@ from handlers.admin_handlers import router
 from database import postgres, mongo
 
 from middlewares.anti_spam_middleware import AntiSpamMiddleware
+from middlewares.check_ban_middleware import BanCheckMiddleware
 
 import config
 
@@ -29,6 +30,9 @@ async def main():
 
     router_1.message.middleware(AntiSpamMiddleware(cache_ttl=0.5))
     router_2.message.middleware(AntiSpamMiddleware(cache_ttl=0.3))
+
+    router_1.message.middleware(BanCheckMiddleware(db=postgres))
+    router_2.message.middleware(BanCheckMiddleware(db=postgres))
 
     dp.include_routers(router_1,
                        router_2,
