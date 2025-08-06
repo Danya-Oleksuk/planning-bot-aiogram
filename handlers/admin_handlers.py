@@ -9,11 +9,11 @@ from keyboards import markup
 
 from database.postgres import (get_all_users, get_all_users_id, get_user_is_banned,
                                is_user_in_database, is_user_vip, activate_vip, get_all_vip_users,
-                               get_all_not_vip_users)
+                               get_all_not_vip_users, get_user_is_banned_by_admin, block_user)
 
 from database.mongo import fetch_all_tasks
 
-from utils import is_admin, PostForm, VipForm, check_and_notify_fsm_state, check_and_notify_registration
+from utils import is_admin, PostForm, VipForm, BanForm, check_and_notify_fsm_state, check_and_notify_registration
 
 from config import BOT_TOKEN
 
@@ -122,6 +122,46 @@ async def gift_the_vip(message: Message, state: FSMContext):
     else:
         await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))
 
+@router.message(F.text == '🚫 Забанить пользователя')
+async def ban_user(message: Message, state: FSMContext):
+    if not await check_and_notify_registration(message):
+        return
+
+    if not await check_and_notify_fsm_state(message, state):
+        return
+
+    if is_admin(message.from_user.id):
+        await message.answer("🆔 Введите id пользователя:", parse_mode=ParseMode.MARKDOWN,
+                             reply_markup=ReplyKeyboardRemove())
+        await state.set_state(BanForm.user_id)
+    else:
+        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))
+
+@router.message(BanForm.user_id, F.text)
+async def fsm_state_for_user_ban(message: Message, state: FSMContext):
+    if not await check_and_notify_registration(message):
+        return
+
+    try:
+        user_id = int(message.md_text)
+
+        if not await is_user_in_database(telegram_id=user_id) or await get_user_is_banned(user_id):
+            raise ValueError
+        
+        if await get_user_is_banned_by_admin(user_id):
+            await message.answer(f"⚠️ Пользователь {user_id} уже был забанен.", reply_markup=markup.admin_panel)
+        else:
+            user_ban = await block_user(user_id)
+
+            if user_ban:
+                await message.answer(f"✅ Пользователь {user_id} забанен.", reply_markup=markup.admin_panel)
+            else:
+                await message.answer(f"⚠️ <b>Не получилось забанить юзера!</b>", parse_mode=ParseMode.HTML)
+        await state.clear()
+    except ValueError:
+        await message.answer("⚠️ Был введен <b>не правильный id</b> или <b>юзер забанил бота</b>", parse_mode=ParseMode.HTML, reply_markup=markup.admin_panel)
+        await state.clear()
+        return
 
 @router.message(VipForm.user_name, F.text)
 async def post_text_vip(message: Message, state: FSMContext):
@@ -245,4 +285,10 @@ async def error(message: Message):
     if not await check_and_notify_registration(message):
         return
 
+    user_is_banned = await get_user_is_banned_by_admin(message.from_user.id)
+
+    if user_is_banned:
+        await message.answer("🚫 Вы были забанены и не можете пользоваться ботом.", reply_markup=ReplyKeyboardRemove())
+        return
+    
     await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))

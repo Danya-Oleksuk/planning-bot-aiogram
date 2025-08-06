@@ -21,6 +21,9 @@ class VipForm(StatesGroup):
     user_name = State()
     date= State()
 
+class BanForm(StatesGroup):
+    user_id = State()
+
 def is_admin(user_id: int) -> bool:
     return user_id == ADMIN_ID
 

@@ -21,7 +21,8 @@ async def create_telegram_bot_db():
                 first_name TEXT,
                 last_name TEXT,
                 username TEXT,
-                is_banned BOOLEAN DEFAULT FALSE,
+                is_banned_by_admin BOOLEAN DEFAULT FALSE,
+                is_banned_by_self BOOLEAN DEFAULT FALSE,
                 joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 unique_key TEXT UNIQUE 
             ) 
@@ -91,11 +92,21 @@ async def increment_completed_tasks(user_id: int):
                     
 async def user_blocked_bot(user_id: int):
     async with pool.acquire() as conn:
-        await conn.execute('UPDATE users SET is_banned = TRUE WHERE telegram_id = $1', user_id)
+        await conn.execute('UPDATE users SET is_banned_by_self = TRUE WHERE telegram_id = $1', user_id)
         
 async def user_unblocked_bot(user_id: int):
     async with pool.acquire() as conn:
-        await conn.execute('UPDATE users SET is_banned = FALSE WHERE telegram_id = $1', user_id)
+        await conn.execute('UPDATE users SET is_banned_by_self = FALSE WHERE telegram_id = $1', user_id)
+
+async def block_user(user_id: int):
+    async with pool.acquire() as conn:
+        await conn.execute('UPDATE users SET is_banned_by_admin = TRUE WHERE telegram_id = $1', user_id)
+        return True
+
+async def get_user_is_banned_by_admin(user_id: int):
+    async with pool.acquire() as conn:
+        result = await conn.fetchval('SELECT is_banned_by_admin FROM users WHERE telegram_id = $1', user_id)
+        return result
 
 async def activate_vip(user_id: int, until: datetime.datetime):
     async with pool.acquire() as conn:
@@ -107,7 +118,7 @@ async def deactivate_vip(user_id: int):
 
 async def get_user_is_banned(user_id: int):
     async with pool.acquire() as conn:
-        result = await conn.fetchval('SELECT is_banned FROM users WHERE telegram_id = $1', user_id)
+        result = await conn.fetchval('SELECT is_banned_by_self FROM users WHERE telegram_id = $1', user_id)
         return result
     
 async def is_user_vip(user_id: int):
@@ -132,7 +143,7 @@ async def get_all_users_id():
 
 async def get_all_users():
     async with pool.acquire() as conn:
-        result = await conn.fetch('SELECT telegram_id, first_name, username, joined_at, is_banned FROM users')
+        result = await conn.fetch('SELECT telegram_id, first_name, username, joined_at, is_banned_by_self FROM users')
         return result
 
 async def get_all_vip_users():
