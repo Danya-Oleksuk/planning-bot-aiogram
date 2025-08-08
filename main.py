@@ -20,8 +20,13 @@ async def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
                         filename="bot.log", filemode="a")
     
-    await postgres.initiate_pool()
-    
+
+    pool = await postgres.initiate_pool()
+
+    user_repo = postgres.UserRepository(pool)
+    vip_repo = postgres.VipRepository(pool)
+    stats_repo = postgres.StatsRepository(pool)
+
     await postgres.create_telegram_bot_db()
     await mongo.create_mongo_database()
 
@@ -31,12 +36,14 @@ async def main():
     router_1.message.middleware(AntiSpamMiddleware(cache_ttl=0.5))
     router_2.message.middleware(AntiSpamMiddleware(cache_ttl=0.3))
 
-    router_1.message.middleware(BanCheckMiddleware(db=postgres))
-    router_2.message.middleware(BanCheckMiddleware(db=postgres))
+    router_1.message.middleware(BanCheckMiddleware(user_repo))
+    router_2.message.middleware(BanCheckMiddleware(user_repo))
 
-    dp.include_routers(router_1,
-                       router_2,
-                       router,)
+    dp["user_repo"] = user_repo
+    dp["vip_repo"] = vip_repo
+    dp["stats_repo"] = stats_repo
+
+    dp.include_routers(router_1, router_2, router)
 
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
