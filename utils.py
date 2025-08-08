@@ -2,7 +2,7 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import ReplyKeyboardRemove
 
 from config import ADMIN_ID
-from database.postgres import is_user_in_database
+from database.postgres import StatsRepository, UserRepository, VipRepository, initiate_pool
 
 
 class TaskForm(StatesGroup):
@@ -27,8 +27,9 @@ class BanForm(StatesGroup):
 def is_admin(user_id: int) -> bool:
     return user_id == ADMIN_ID
 
-async def check_and_notify_registration(message) -> bool:
-    if not await is_user_in_database(telegram_id=message.from_user.id):
+async def check_and_notify_registration(message, user_repo) -> bool:
+
+    if not await user_repo.is_user_in_database(telegram_id=message.from_user.id):
         await message.answer("Вы не зарегистрированы, нажмите /start!", reply_markup=ReplyKeyboardRemove())
         return False
     return True
