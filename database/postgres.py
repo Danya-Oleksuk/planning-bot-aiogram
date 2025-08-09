@@ -60,10 +60,11 @@ class UserRepository:
         unique_key = str(uuid.uuid4())
 
         async with self.pool.acquire() as conn:
-            await conn.execute('''
-                    INSERT INTO users (telegram_id, first_name, last_name, username, joined_at, unique_key)
-                    VALUES ($1, $2, $3, $4, $5, $6)
-                ''', user_id, first_name, last_name, username, datetime.datetime.now(), unique_key)
+            async with conn.transaction():
+                await conn.execute('''
+                        INSERT INTO users (telegram_id, first_name, last_name, username, joined_at, unique_key)
+                        VALUES ($1, $2, $3, $4, $5, $6)
+                    ''', user_id, first_name, last_name, username, datetime.datetime.now(), unique_key)
             
 
             await conn.execute('''
@@ -73,16 +74,19 @@ class UserRepository:
                 
     async def user_blocked_bot(self, user_id: int):
         async with self.pool.acquire() as conn:
-            await conn.execute('UPDATE users SET is_banned_by_self = TRUE WHERE telegram_id = $1', user_id)
+            async with conn.transaction():
+                await conn.execute('UPDATE users SET is_banned_by_self = TRUE WHERE telegram_id = $1', user_id)
             
     async def user_unblocked_bot(self, user_id: int):
         async with self.pool.acquire() as conn:
-            await conn.execute('UPDATE users SET is_banned_by_self = FALSE WHERE telegram_id = $1', user_id)
+            async with conn.transaction():
+                await conn.execute('UPDATE users SET is_banned_by_self = FALSE WHERE telegram_id = $1', user_id)
 
     async def block_user(self, user_id: int):
         async with self.pool.acquire() as conn:
-            await conn.execute('UPDATE users SET is_banned_by_admin = TRUE WHERE telegram_id = $1', user_id)
-            return True
+            async with conn.transaction():
+                await conn.execute('UPDATE users SET is_banned_by_admin = TRUE WHERE telegram_id = $1', user_id)
+                return True
 
     async def get_user_is_banned_by_admin(self, user_id: int):
         async with self.pool.acquire() as conn:
@@ -115,11 +119,13 @@ class VipRepository:
 
     async def activate_vip(self, user_id: int, until: datetime.datetime):
         async with self.pool.acquire() as conn:
-            await conn.execute('UPDATE vip_status SET is_vip = TRUE, vip_until = $1 WHERE user_id = $2', until, user_id)
+            async with conn.transaction():
+                await conn.execute('UPDATE vip_status SET is_vip = TRUE, vip_until = $1 WHERE user_id = $2', until, user_id)
 
     async def deactivate_vip(self, user_id: int):
         async with self.pool.acquire() as conn:
-            await conn.execute('UPDATE vip_status SET is_vip = FALSE, vip_until = NULL WHERE user_id = $1', user_id)
+            async with conn.transaction():
+                await conn.execute('UPDATE vip_status SET is_vip = FALSE, vip_until = NULL WHERE user_id = $1', user_id)
         
     async def is_user_vip(self, user_id: int):
         async with self.pool.acquire() as conn:
@@ -152,18 +158,20 @@ class StatsRepository:
 
     async def increment_total_tasks(self, user_id: int):
         async with self.pool.acquire() as conn:
-            exists = await conn.fetchval('SELECT 1 FROM user_stats WHERE user_id = $1', user_id)
-            
-            if not exists:
-                await conn.execute('INSERT INTO user_stats(user_id, total_tasks) VALUES($1, 1)', user_id)
-            else:
-                await conn.execute('UPDATE user_stats SET total_tasks = total_tasks + 1 WHERE user_id = $1', user_id)
+            async with conn.transaction():
+                exists = await conn.fetchval('SELECT 1 FROM user_stats WHERE user_id = $1', user_id)
+                
+                if not exists:
+                    await conn.execute('INSERT INTO user_stats(user_id, total_tasks) VALUES($1, 1)', user_id)
+                else:
+                    await conn.execute('UPDATE user_stats SET total_tasks = total_tasks + 1 WHERE user_id = $1', user_id)
 
     async def increment_completed_tasks(self, user_id: int):
         async with self.pool.acquire() as conn:
-            exists = await conn.fetchval('SELECT 1 FROM user_stats WHERE user_id = $1', user_id)
+            async with conn.transaction():
+                exists = await conn.fetchval('SELECT 1 FROM user_stats WHERE user_id = $1', user_id)
 
-            if not exists:
-                await conn.execute('INSERT INTO user_stats(user_id, completed_tasks) VALUES($1, 1)', user_id)
-            else:
-                await conn.execute('UPDATE user_stats SET completed_tasks = completed_tasks + 1 WHERE user_id = $1', user_id)
+                if not exists:
+                    await conn.execute('INSERT INTO user_stats(user_id, completed_tasks) VALUES($1, 1)', user_id)
+                else:
+                    await conn.execute('UPDATE user_stats SET completed_tasks = completed_tasks + 1 WHERE user_id = $1', user_id)
