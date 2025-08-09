@@ -151,6 +151,7 @@ async def fsm_state_for_user_ban(message: Message, state: FSMContext, user_repo)
             user_ban = await user_repo.block_user(user_id)
 
             if user_ban:
+                await send_user_message(user_id, "🚫 Вы были забанены администратором бота.")
                 await message.answer(f"✅ Пользователь {user_id} забанен.", reply_markup=markup.admin_panel)
             else:
                 await message.answer(f"⚠️ <b>Не получилось забанить юзера!</b>", parse_mode=ParseMode.HTML)
