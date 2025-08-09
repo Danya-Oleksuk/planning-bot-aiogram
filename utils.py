@@ -24,6 +24,9 @@ class VipForm(StatesGroup):
 class BanForm(StatesGroup):
     user_id = State()
 
+class UnBanForm(StatesGroup):
+    user_id = State()
+
 def is_admin(user_id: int) -> bool:
     return user_id == ADMIN_ID
 
@@ -45,13 +48,13 @@ async def check_and_notify_fsm_state(message, state) -> bool:
         return False
     return True
 
-async def send_user_message(user_id: int, text: str) -> None:
+async def send_user_message(user_id: int, text: str, keyboard=None) -> None:
     try:
         from config import BOT_TOKEN
         from aiogram import Bot
         from aiogram.enums import ParseMode
 
         bot = Bot(token=BOT_TOKEN)
-        await bot.send_message(chat_id=user_id, text=text, parse_mode=ParseMode.HTML)
+        await bot.send_message(chat_id=user_id, text=text, parse_mode=ParseMode.HTML, reply_markup=keyboard or ReplyKeyboardRemove())
     except Exception as e:
         print(f"Failed to send message to user {user_id}: {e}")
