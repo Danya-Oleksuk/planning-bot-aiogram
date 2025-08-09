@@ -22,10 +22,13 @@ async def main():
     
 
     pool = await postgres.initiate_pool()
+    tasks_collection, db = await mongo.create_mongo_database()
 
     user_repo = postgres.UserRepository(pool)
     vip_repo = postgres.VipRepository(pool)
     stats_repo = postgres.StatsRepository(pool)
+
+    task_repo = mongo.TaskRepository(tasks_collection, db)
 
     await postgres.create_telegram_bot_db()
     await mongo.create_mongo_database()
@@ -42,6 +45,7 @@ async def main():
     dp["user_repo"] = user_repo
     dp["vip_repo"] = vip_repo
     dp["stats_repo"] = stats_repo
+    dp["task_repo"] = task_repo
 
     dp.include_routers(router_1, router_2, router)
 
