@@ -87,7 +87,13 @@ class UserRepository:
             async with conn.transaction():
                 await conn.execute('UPDATE users SET is_banned_by_admin = TRUE WHERE telegram_id = $1', user_id)
                 return True
-
+            
+    async def unblock_user(self, user_id: int):
+        async with self.pool.acquire() as conn:
+            async with conn.transaction():
+                await conn.execute('UPDATE users SET is_banned_by_admin = FALSE WHERE telegram_id = $1', user_id)
+                return True
+            
     async def get_user_is_banned_by_admin(self, user_id: int):
         async with self.pool.acquire() as conn:
             result = await conn.fetchval('SELECT is_banned_by_admin FROM users WHERE telegram_id = $1', user_id)
