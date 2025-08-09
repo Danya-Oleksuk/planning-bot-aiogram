@@ -7,8 +7,6 @@ from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from keyboards import markup
 
-from database.mongo import fetch_all_tasks
-
 from utils import is_admin, PostForm, VipForm, BanForm, UnBanForm, check_and_notify_fsm_state, check_and_notify_registration, send_user_message
 
 from config import BOT_TOKEN
@@ -49,7 +47,7 @@ async def show_all_users(message: Message, state: FSMContext, user_repo):
         await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))
 
 @router.message(F.text == '📋 Вывести все коллекции')
-async def show_all_collections(message: Message, state: FSMContext, user_repo):
+async def show_all_collections(message: Message, state: FSMContext, user_repo, task_repo):
     if not await check_and_notify_registration(message, user_repo):
         return
 
@@ -57,7 +55,7 @@ async def show_all_collections(message: Message, state: FSMContext, user_repo):
         return
 
     if is_admin(message.from_user.id):
-        collections = await fetch_all_tasks()
+        collections = await task_repo.fetch_all_tasks()
         await message.answer(text="\n".join(collections))
     else:
         await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))

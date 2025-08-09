@@ -10,9 +10,6 @@ from aiogram.types import (CallbackQuery, LabeledPrice, Message,
 
 from keyboards import markup
 
-from database.mongo import (fetch_tasks, count_user_tasks, create_task, mark_task_completed,
-                            delete_task_by_index, delete_all_tasks)
-
 from utils import is_admin, PaymentForm, TaskForm, check_and_notify_fsm_state, check_and_notify_registration
 
 
@@ -94,14 +91,14 @@ async def help(message: Message, state: FSMContext, user_repo):
                         parse_mode=ParseMode.HTML, reply_markup=markup.get_menu(message.from_user.id))
 
 @router_1.message(F.text.in_(['📋 План', '/plan']))
-async def show_plan(message: Message, state: FSMContext, vip_repo, user_repo):
+async def show_plan(message: Message, state: FSMContext, vip_repo, user_repo, task_repo):
     if not await check_and_notify_registration(message, user_repo):
         return
 
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    tasks = await fetch_tasks(user_id=message.from_user.id)
+    tasks = await task_repo.fetch_tasks(user_id=message.from_user.id)
     if not tasks:
         await message.answer("❗️Ваш план на сегодня пуст!", reply_markup=markup.get_menu(message.from_user.id))
     else:
@@ -147,14 +144,14 @@ async def show_plan(message: Message, state: FSMContext, vip_repo, user_repo):
             )
 
 @router_2.message(F.text.in_(['🧹 Очистить весь план', '/clear_plan']))
-async def clear_plan(message: Message, state: FSMContext, user_repo):
+async def clear_plan(message: Message, state: FSMContext, user_repo, task_repo):
     if not await check_and_notify_registration(message, user_repo):
         return
 
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    res = await delete_all_tasks(user_id=message.from_user.id)
+    res = await task_repo.delete_all_tasks(user_id=message.from_user.id)
     if res is True:
         await message.answer("❗️Теперь ваш план пуст", reply_markup=markup.get_menu(message.from_user.id))
     else:
@@ -171,14 +168,14 @@ async def edit_plan(message: Message, state: FSMContext, user_repo):
     await message.answer("🖋 Меню редактирования: ", reply_markup=markup.edit_menu)
 
 @router_1.message(F.text.in_(['➕ Добавить задачу', '/add_task']))
-async def create_task_(message: Message, state: FSMContext, vip_repo, user_repo):
+async def create_task_(message: Message, state: FSMContext, vip_repo, user_repo, task_repo):
     if not await check_and_notify_registration(message, user_repo):
         return
 
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    if await count_user_tasks(user_id=message.from_user.id) < 3:
+    if await task_repo.count_user_tasks(user_id=message.from_user.id) < 3:
         await message.answer("✍️ Введите название задачи:", reply_markup=ReplyKeyboardRemove())
         await state.set_state(TaskForm.task_name)
     elif is_admin(message.from_user.id):
@@ -197,14 +194,14 @@ async def create_task_(message: Message, state: FSMContext, vip_repo, user_repo)
         await message.answer("✍️ К сожалению лимит исчерпан, /pay", reply_markup=markup.edit_menu)
 
 @router_2.message(F.text.in_(['❌ Удалить задачу', '/remove_task']))
-async def initiate_task_removal(message: Message, state: FSMContext, user_repo):
+async def initiate_task_removal(message: Message, state: FSMContext, user_repo, task_repo):
     if not await check_and_notify_registration(message, user_repo):
         return
 
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    tasks = await fetch_tasks(user_id=message.from_user.id)
+    tasks = await task_repo.fetch_tasks(user_id=message.from_user.id)
 
     if not tasks:
         await message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
@@ -212,18 +209,18 @@ async def initiate_task_removal(message: Message, state: FSMContext, user_repo):
         task_pairs = [(key, value) for task in tasks for key, value in task.items()]
         await message.answer("Выберете задачу, которую вы хотите удалить:\n\n" + "\n".join(
             [f"{i + 1}. {task[0]} - {task[1]}" for i, task in enumerate(task_pairs)]),
-                             reply_markup=markup.inline_builder(num=await count_user_tasks(user_id=message.from_user.id),
+                             reply_markup=markup.inline_builder(num=await task_repo.count_user_tasks(user_id=message.from_user.id),
                                                                 emoji="🗑", action="delete"))
 
 @router_2.message(F.text.in_(['✔️ Изменить статус задачи', '/edit_task_status']))
-async def edit_task_status_(message: Message, state: FSMContext, user_repo):
+async def edit_task_status_(message: Message, state: FSMContext, user_repo, task_repo):
     if not await check_and_notify_registration(message, user_repo):
         return
 
     if not await check_and_notify_fsm_state(message, state):
         return
 
-    tasks = await fetch_tasks(user_id=message.from_user.id)
+    tasks = await task_repo.fetch_tasks(user_id=message.from_user.id)
     if not tasks:
         await message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
     else:
@@ -233,7 +230,7 @@ async def edit_task_status_(message: Message, state: FSMContext, user_repo):
         else:
             await message.answer("Выберете задачу, которую вы хотите выполнить:\n\n" + "\n".join(
                                         [task for task in tasks]), 
-                                        reply_markup=markup.inline_builder(num=await count_user_tasks(user_id=message.from_user.id), 
+                                        reply_markup=markup.inline_builder(num=await task_repo.count_user_tasks(user_id=message.from_user.id), 
                                         emoji="✅", 
                                         action="update"))
 
@@ -280,25 +277,25 @@ async def pay(message: Message, state: FSMContext, vip_repo, user_repo):
                                     parse_mode=ParseMode.HTML, reply_markup=markup.vip_menu)
 
 @router_1.message(TaskForm.task_name)
-async def task_name(message: Message, state: FSMContext, stats_repo):
+async def task_name(message: Message, state: FSMContext, stats_repo, task_repo):
     if not message.text:
         return
     elif len(message.text) > 50:
         await message.answer("❗️Название задачи не должно быть больше 50 символов\n\n✍️  Введите название задачи:")
         return
 
-    await create_task(user_id=message.from_user.id, task_description=message.text)
+    await task_repo.create_task(user_id=message.from_user.id, task_description=message.text)
     await stats_repo.increment_total_tasks(user_id=message.from_user.id)
     await state.clear()
     await message.answer('✅ Задача была добавлена', reply_markup=markup.edit_menu)
 
 @router_1.callback_query(F.data.startswith('delete_'))
-async def confirm_task_removal(call: CallbackQuery):
+async def confirm_task_removal(call: CallbackQuery, task_repo):
     task_num = int(call.data.split('_')[1])
-    result = await delete_task_by_index(number_of_task=task_num, user_id=call.from_user.id)
+    result = await task_repo.delete_task_by_index(number_of_task=task_num, user_id=call.from_user.id)
 
     if result is True:
-        tasks = await fetch_tasks(user_id=call.from_user.id)
+        tasks = await task_repo.fetch_tasks(user_id=call.from_user.id)
 
         if not tasks:
             await call.message.answer("❗️Ваш план пуст", reply_markup=markup.edit_menu)
@@ -306,7 +303,7 @@ async def confirm_task_removal(call: CallbackQuery):
             task_pairs = [(key, value) for task in tasks for key, value in task.items()]
             await call.message.answer("Выберете задачу, которую вы хотите удалить:\n\n" + "\n".join(
                 [f"{i + 1}. {task[0]} - {task[1]}" for i, task in enumerate(task_pairs)]),
-                                 reply_markup=markup.inline_builder(num=await count_user_tasks(user_id=call.from_user.id),
+                                 reply_markup=markup.inline_builder(num=await task_repo.count_user_tasks(user_id=call.from_user.id),
                                                                     emoji="🗑", action="delete"))
         await call.answer("Удалил")
 
@@ -314,13 +311,13 @@ async def confirm_task_removal(call: CallbackQuery):
         await call.answer("😳 Что то пошло не так!")
 
 @router_1.callback_query(F.data.startswith('update_'))
-async def update_task_status(call: CallbackQuery, stats_repo):
+async def update_task_status(call: CallbackQuery, stats_repo, task_repo):
     task_num = int(call.data.split('_')[1])
-    result = await mark_task_completed(user_id=call.from_user.id, task_number=task_num)
+    result = await task_repo.mark_task_completed(user_id=call.from_user.id, task_number=task_num)
     await stats_repo.increment_completed_tasks(user_id=call.from_user.id)
 
     if result is True:
-        tasks = await fetch_tasks(user_id=call.from_user.id)
+        tasks = await task_repo.fetch_tasks(user_id=call.from_user.id)
 
         if not tasks:
             await call.message.answer("❗️Ваш план теперь пуст", reply_markup=markup.get_menu(call.from_user.id))
@@ -333,7 +330,7 @@ async def update_task_status(call: CallbackQuery, stats_repo):
         else:
             await call.message.answer(
                 "Выберите задачу, которую вы хотите выполнить:\n\n" + "\n".join([task for task in tasks]), parse_mode=ParseMode.HTML,
-                reply_markup=markup.inline_builder(num=await count_user_tasks(user_id=call.from_user.id), emoji="✅", action="update"))
+                reply_markup=markup.inline_builder(num=await task_repo.count_user_tasks(user_id=call.from_user.id), emoji="✅", action="update"))
             await call.answer("✅ Выполнил")
 
     elif result is False:
