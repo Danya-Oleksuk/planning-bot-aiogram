@@ -45,3 +45,13 @@ async def check_and_notify_fsm_state(message, state) -> bool:
         return False
     return True
 
+async def send_user_message(user_id: int, text: str) -> None:
+    try:
+        from config import BOT_TOKEN
+        from aiogram import Bot
+        from aiogram.enums import ParseMode
+
+        bot = Bot(token=BOT_TOKEN)
+        await bot.send_message(chat_id=user_id, text=text, parse_mode=ParseMode.HTML)
+    except Exception as e:
+        print(f"Failed to send message to user {user_id}: {e}")

@@ -9,7 +9,7 @@ from keyboards import markup
 
 from database.mongo import fetch_all_tasks
 
-from utils import is_admin, PostForm, VipForm, BanForm, check_and_notify_fsm_state, check_and_notify_registration
+from utils import is_admin, PostForm, VipForm, BanForm, check_and_notify_fsm_state, check_and_notify_registration, send_user_message
 
 from config import BOT_TOKEN
 
@@ -185,8 +185,6 @@ async def post_text_regular(message: Message, state: FSMContext, user_repo, vip_
     if not await check_and_notify_registration(message, user_repo):
         return
     
-    bot = Bot(token=BOT_TOKEN)
-
     await state.update_data(until_date=message.md_text)
     data = await state.get_data()
 
@@ -212,15 +210,15 @@ async def post_text_regular(message: Message, state: FSMContext, user_repo, vip_
             await vip_repo.activate_vip(user_id=int(data['user_name']), until=until_date)
 
             await message.answer('🥳 Vip статус успешно подарен', reply_markup=markup.get_menu(message.from_user.id))
-                
-            await bot.send_message(
-                    int(data['user_name']),
-                    f"🎉 <b>Поздравляем!</b>\n\n"
-                    f"Вам был подарен <b>VIP статус</b> {period_str} ✨\n"
-                    f"Статус действителен до <b><u>{'неограниченно' if until_date > datetime.datetime.now() + datetime.timedelta(days=999) else until_date.strftime('%Y-%m-%d')}</u></b> 🎁\n\n"
-                    f"Наслаждайтесь привилегиями! 💎",
-                    parse_mode=ParseMode.HTML
-                )
+            
+            text = (
+                f"🎉 <b>Поздравляем!</b>\n\n"
+                f"Вам был подарен <b>VIP статус</b> {period_str} ✨\n"
+                f"Статус действителен до <b><u>{'неограниченно' if until_date > datetime.datetime.now() + datetime.timedelta(days=999) else until_date.strftime('%Y-%m-%d')}</u></b> 🎁\n\n"
+                f"Наслаждайтесь привилегиями! 💎"
+            )
+
+            await send_user_message(int(data['user_name']), text=text)
         else:
             await message.answer('⚠️ <b>Дата</b> введена не правильно', parse_mode=ParseMode.HTML, reply_markup=markup.admin_panel)
     except Exception as ex:
