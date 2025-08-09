@@ -9,7 +9,7 @@ from keyboards import markup
 
 from database.mongo import fetch_all_tasks
 
-from utils import is_admin, PostForm, VipForm, BanForm, check_and_notify_fsm_state, check_and_notify_registration, send_user_message
+from utils import is_admin, PostForm, VipForm, BanForm, UnBanForm, check_and_notify_fsm_state, check_and_notify_registration, send_user_message
 
 from config import BOT_TOKEN
 
@@ -134,6 +134,21 @@ async def ban_user(message: Message, state: FSMContext, user_repo):
     else:
         await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))
 
+@router.message(F.text == '🔓 Разбанить пользователя')
+async def unban_user(message: Message, state: FSMContext, user_repo):
+    if not await check_and_notify_registration(message, user_repo):
+        return
+
+    if not await check_and_notify_fsm_state(message, state):
+        return
+
+    if is_admin(message.from_user.id):
+        await message.answer("🆔 Введите id пользователя:", parse_mode=ParseMode.MARKDOWN,
+                             reply_markup=ReplyKeyboardRemove())
+        await state.set_state(UnBanForm.user_id)
+    else:
+        await message.answer("🤷🏻 Непонятная команда, попробуйте снова", reply_markup=markup.get_menu(message.from_user.id))
+
 @router.message(BanForm.user_id, F.text)
 async def fsm_state_for_user_ban(message: Message, state: FSMContext, user_repo):
     if not await check_and_notify_registration(message, user_repo):
@@ -155,6 +170,33 @@ async def fsm_state_for_user_ban(message: Message, state: FSMContext, user_repo)
                 await message.answer(f"✅ Пользователь {user_id} забанен.", reply_markup=markup.admin_panel)
             else:
                 await message.answer(f"⚠️ <b>Не получилось забанить юзера!</b>", parse_mode=ParseMode.HTML)
+        await state.clear()
+    except ValueError:
+        await message.answer("⚠️ Был введен <b>не правильный id</b> или <b>юзер забанил бота</b>", parse_mode=ParseMode.HTML, reply_markup=markup.admin_panel)
+        await state.clear()
+        return
+
+@router.message(UnBanForm.user_id, F.text)
+async def fsm_state_for_user_ban(message: Message, state: FSMContext, user_repo):
+    if not await check_and_notify_registration(message, user_repo):
+        return
+
+    try:
+        user_id = int(message.md_text)
+
+        if not await user_repo.is_user_in_database(telegram_id=user_id) or await user_repo.get_user_is_banned(user_id):
+            raise ValueError
+        
+        if await user_repo.get_user_is_banned_by_admin(user_id):
+            user_unban = await user_repo.unblock_user(user_id)
+
+            if user_unban:
+                await send_user_message(user_id, "🔓 Вы были разбанены администратором бота.", keyboard=markup.get_menu(user_id))
+                await message.answer(f"✅ Пользователь {user_id} разбанен.", reply_markup=markup.admin_panel)
+            else:
+                await message.answer(f"⚠️ <b>Не получилось забанить юзера!</b>", parse_mode=ParseMode.HTML)
+        else:
+            await message.answer(f"⚠️ Пользователь {user_id} уже разбанен.", reply_markup=markup.admin_panel)
         await state.clear()
     except ValueError:
         await message.answer("⚠️ Был введен <b>не правильный id</b> или <b>юзер забанил бота</b>", parse_mode=ParseMode.HTML, reply_markup=markup.admin_panel)
