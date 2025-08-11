@@ -20,11 +20,19 @@ async def create_telegram_bot_db():
                 first_name TEXT,
                 last_name TEXT,
                 username TEXT,
-                is_banned_by_admin BOOLEAN DEFAULT FALSE,
-                is_banned_by_self BOOLEAN DEFAULT FALSE,
                 joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 unique_key TEXT UNIQUE 
             ) 
+        ''')
+    
+    await conn.execute('''
+        CREATE TABLE IF NOT EXISTS bans (
+                id SERIAL PRIMARY KEY,
+                user_id BIGINT REFERENCES users(telegram_id) ON DELETE CASCADE,
+                is_banned_by_admin BOOLEAN DEFAULT FALSE,
+                is_banned_by_self BOOLEAN DEFAULT FALSE,
+                banned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
         ''')
     
     await conn.execute('''
@@ -65,7 +73,10 @@ class UserRepository:
                         INSERT INTO users (telegram_id, first_name, last_name, username, joined_at, unique_key)
                         VALUES ($1, $2, $3, $4, $5, $6)
                     ''', user_id, first_name, last_name, username, datetime.datetime.now(), unique_key)
-            
+
+            await conn.execute('''
+                INSERT INTO bans (user_id) VALUES ($1)
+            ''', user_id)        
 
             await conn.execute('''
                 INSERT INTO vip_status (user_id, is_vip, vip_until)
@@ -75,33 +86,33 @@ class UserRepository:
     async def user_blocked_bot(self, user_id: int):
         async with self.pool.acquire() as conn:
             async with conn.transaction():
-                await conn.execute('UPDATE users SET is_banned_by_self = TRUE WHERE telegram_id = $1', user_id)
+                await conn.execute('UPDATE bans SET is_banned_by_self = TRUE WHERE user_id = $1', user_id)
             
     async def user_unblocked_bot(self, user_id: int):
         async with self.pool.acquire() as conn:
             async with conn.transaction():
-                await conn.execute('UPDATE users SET is_banned_by_self = FALSE WHERE telegram_id = $1', user_id)
+                await conn.execute('UPDATE bans SET is_banned_by_self = FALSE WHERE user_id = $1', user_id)
 
     async def block_user(self, user_id: int):
         async with self.pool.acquire() as conn:
             async with conn.transaction():
-                await conn.execute('UPDATE users SET is_banned_by_admin = TRUE WHERE telegram_id = $1', user_id)
+                await conn.execute('UPDATE bans SET is_banned_by_admin = TRUE WHERE user_id = $1', user_id)
                 return True
             
     async def unblock_user(self, user_id: int):
         async with self.pool.acquire() as conn:
             async with conn.transaction():
-                await conn.execute('UPDATE users SET is_banned_by_admin = FALSE WHERE telegram_id = $1', user_id)
+                await conn.execute('UPDATE bans SET is_banned_by_admin = FALSE WHERE user_id = $1', user_id)
                 return True
             
     async def get_user_is_banned_by_admin(self, user_id: int):
         async with self.pool.acquire() as conn:
-            result = await conn.fetchval('SELECT is_banned_by_admin FROM users WHERE telegram_id = $1', user_id)
+            result = await conn.fetchval('SELECT is_banned_by_admin FROM bans WHERE user_id = $1', user_id)
             return result
 
     async def get_user_is_banned(self, user_id: int):
         async with self.pool.acquire() as conn:
-            result = await conn.fetchval('SELECT is_banned_by_self FROM users WHERE telegram_id = $1', user_id)
+            result = await conn.fetchval('SELECT is_banned_by_self FROM bans WHERE user_id = $1', user_id)
             return result
     
     async def get_user_profile(self, user_id: int):
@@ -116,7 +127,11 @@ class UserRepository:
 
     async def get_all_users(self):
         async with self.pool.acquire() as conn:
-            result = await conn.fetch('SELECT telegram_id, first_name, username, joined_at, is_banned_by_self FROM users')
+            result = await conn.fetch('''
+                    SELECT u.telegram_id, u.first_name, u.username, u.joined_at, b.is_banned_by_self
+                    FROM users u
+                    JOIN bans b ON u.telegram_id = b.user_id
+                ''')
             return result
 
 class VipRepository:
