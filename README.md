@@ -103,8 +103,3 @@ Make sure your PostgreSQL is accessible to the container.
 - **Docker** for containerization  
 - **Asyncio**, **Logging**, and custom middlewares
 
----
-
-## 📈 Planned Features
-
-- ⏰ Task reminders  
