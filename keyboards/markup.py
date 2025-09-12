@@ -1,8 +1,8 @@
-from aiogram.types import (InlineKeyboardMarkup, KeyboardButton,
-                           ReplyKeyboardMarkup)
+from aiogram.types import InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 
 from config import ADMIN_ID
+
 
 def get_menu(user_id: int):
     buttons = [
@@ -20,7 +20,12 @@ def get_menu(user_id: int):
     if user_id == ADMIN_ID:
         buttons.append([KeyboardButton(text="➡️ Админ панель")])
 
-    return ReplyKeyboardMarkup(keyboard=buttons, resize_keyboard=True, input_field_placeholder="Выберите вариант.. ")
+    return ReplyKeyboardMarkup(
+        keyboard=buttons,
+        resize_keyboard=True,
+        input_field_placeholder="Выберите вариант.. ",
+    )
+
 
 edit_menu = ReplyKeyboardMarkup(
     keyboard=[
@@ -29,16 +34,15 @@ edit_menu = ReplyKeyboardMarkup(
             KeyboardButton(text="✔️ Изменить статус задачи"),
         ],
         [
-                KeyboardButton(text="❌ Удалить задачу"),
-                KeyboardButton(text="🧹 Очистить весь план"),
+            KeyboardButton(text="❌ Удалить задачу"),
+            KeyboardButton(text="🧹 Очистить весь план"),
         ],
         [
             KeyboardButton(text="⬅️ Назад"),
         ],
     ],
-
     resize_keyboard=True,
-    input_field_placeholder="Выберите вариант.. "
+    input_field_placeholder="Выберите вариант.. ",
 )
 
 admin_panel = ReplyKeyboardMarkup(
@@ -61,25 +65,30 @@ admin_panel = ReplyKeyboardMarkup(
             KeyboardButton(text="⬅️ Назад"),
         ],
     ],
-
     resize_keyboard=True,
 )
 
 vip_menu = InlineKeyboardMarkup(
     inline_keyboard=[
         [
-            InlineKeyboardButton(text="7 дней за 100 ⭐️ / $1.99", callback_data='vip_1_week_access'),
+            InlineKeyboardButton(
+                text="7 дней за 100 ⭐️ / $1.99", callback_data="vip_1_week_access"
+            ),
         ],
         [
-            InlineKeyboardButton(text="1 месяц за 200 ⭐️ / $3.99", callback_data='vip_1_month_access'),
+            InlineKeyboardButton(
+                text="1 месяц за 200 ⭐️ / $3.99", callback_data="vip_1_month_access"
+            ),
         ],
         [
-            InlineKeyboardButton(text="1 год за 500 ⭐️ / $9.49", callback_data='vip_1_year_access'),
+            InlineKeyboardButton(
+                text="1 год за 500 ⭐️ / $9.49", callback_data="vip_1_year_access"
+            ),
         ],
     ],
-
     resize_keyboard=True,
 )
+
 
 def inline_builder(num: int, emoji: str, action: str):
     builder = InlineKeyboardBuilder()
@@ -90,11 +99,12 @@ def inline_builder(num: int, emoji: str, action: str):
 
     return builder.as_markup()
 
+
 def get_post_confirm():
     builder = InlineKeyboardBuilder()
     builder.row(
         InlineKeyboardButton(text="Отправить сейчас", callback_data="post_confirm"),
-        InlineKeyboardButton(text="Отменить", callback_data="post_cancel")
+        InlineKeyboardButton(text="Отменить", callback_data="post_cancel"),
     )
 
     return builder.as_markup()

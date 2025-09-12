@@ -1,6 +1,6 @@
 import os
-from dotenv import load_dotenv
 
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -11,7 +11,7 @@ DB_CONFIG = {
     "host": os.getenv("DB_HOST"),
 }
 
-ADMIN_ID = int(os.getenv('ADMIN_ID'))
+ADMIN_ID = int(os.getenv("ADMIN_ID"))
 
 BOT_TOKEN = os.getenv("BOT_TOKEN")
 

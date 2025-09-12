@@ -5,24 +5,21 @@ from config import MONGO_API_TOKEN
 
 async def create_mongo_database():
     main_client = pymongo.AsyncMongoClient(MONGO_API_TOKEN)
-    db = main_client['tasks_database']
+    db = main_client["tasks_database"]
 
-    tasks_collection = db['tasks']
+    tasks_collection = db["tasks"]
 
     return tasks_collection, db
+
 
 class TaskRepository:
     def __init__(self, tasks_collection, db):
         self.tasks_collection = tasks_collection
         self.db = db
-    
+
     async def create_task(self, user_id: int, task_description: str):
         if self.tasks_collection is not None:
-            task = {
-                "user_id": user_id,
-                "task": task_description,
-                "status": "❌"
-            }
+            task = {"user_id": user_id, "task": task_description, "status": "❌"}
             await self.tasks_collection.insert_one(task)
 
     async def fetch_tasks(self, user_id: int):
@@ -32,11 +29,15 @@ class TaskRepository:
             lst.append({data.get("task"): data.get("status")})
         return lst
 
-    async def fetch_all_tasks(self, ):
+    async def fetch_all_tasks(
+        self,
+    ):
         lst = []
 
         async for data in self.tasks_collection.find():
-            lst.append(f"{data.get('user_id')} - {data.get('task')} - {data.get('status')}")
+            lst.append(
+                f"{data.get('user_id')} - {data.get('task')} - {data.get('status')}"
+            )
         return lst
 
     async def count_user_tasks(self, user_id: int):
@@ -50,7 +51,9 @@ class TaskRepository:
         if not await self.fetch_tasks(user_id):
             return False
 
-        task_cursor = self.tasks_collection.find({"user_id": user_id}).sort([("_id", 1)])
+        task_cursor = self.tasks_collection.find({"user_id": user_id}).sort(
+            [("_id", 1)]
+        )
 
         tasks_list = []
         async for task in task_cursor:
@@ -62,8 +65,7 @@ class TaskRepository:
         task_to_update = tasks_list[task_number - 1]
 
         await self.db.tasks.update_one(
-            {"_id": task_to_update["_id"]},
-            {"$set": {"status": "✅"}}
+            {"_id": task_to_update["_id"]}, {"$set": {"status": "✅"}}
         )
         return True
 
@@ -77,7 +79,13 @@ class TaskRepository:
         if number_of_task - 1 < len(tasks_list):
             task_to_delete = tasks_list[number_of_task - 1]
 
-            await self.tasks_collection.delete_one({"user_id": user_id, "task": task_to_delete.get("task"), "status": task_to_delete.get("status")})
+            await self.tasks_collection.delete_one(
+                {
+                    "user_id": user_id,
+                    "task": task_to_delete.get("task"),
+                    "status": task_to_delete.get("status"),
+                }
+            )
             return True
         else:
             return False
@@ -88,6 +96,3 @@ class TaskRepository:
 
         await self.tasks_collection.delete_many({"user_id": user_id})
         return True
-
-
-

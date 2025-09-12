@@ -3,23 +3,23 @@ import logging
 
 from aiogram import Bot, Dispatcher
 
-from handlers.user_handlers import router_1, router_2
+import config
+from database import mongo, postgres
 from handlers.admin_handlers import router
-
-from database import postgres, mongo
-
+from handlers.user_handlers import router_1, router_2
 from middlewares.anti_spam_middleware import AntiSpamMiddleware
 from middlewares.check_ban_middleware import BanCheckMiddleware
 
-import config
-
-
 BOT_TOKEN = config.BOT_TOKEN
 
+
 async def main():
-    logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
-                        filename="bot.log", filemode="a")
-    
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
+        filename="bot.log",
+        filemode="a",
+    )
 
     pool = await postgres.initiate_pool()
     tasks_collection, db = await mongo.create_mongo_database()
@@ -52,7 +52,8 @@ async def main():
     await bot.delete_webhook(drop_pending_updates=True)
     await dp.start_polling(bot)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:

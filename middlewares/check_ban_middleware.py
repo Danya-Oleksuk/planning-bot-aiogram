@@ -1,8 +1,8 @@
-from aiogram import BaseMiddleware
-from aiogram.types import Message, TelegramObject
-from typing import Callable, Awaitable, Dict
+from typing import Awaitable, Callable, Dict
 
-from aiogram.types import ReplyKeyboardRemove
+from aiogram import BaseMiddleware
+from aiogram.types import Message, ReplyKeyboardRemove, TelegramObject
+
 
 class BanCheckMiddleware(BaseMiddleware):
     def __init__(self, db):
@@ -12,14 +12,17 @@ class BanCheckMiddleware(BaseMiddleware):
         self,
         handler: Callable[[TelegramObject, Dict], Awaitable],
         event: TelegramObject,
-        data: Dict
+        data: Dict,
     ) -> Awaitable:
         if isinstance(event, Message):
             user_id = event.from_user.id
             user_is_banned = await self.db.get_user_is_banned_by_admin(user_id)
 
             if user_is_banned:
-                await event.answer("🚫 Вы были забанены и не можете пользоваться ботом.", reply_markup=ReplyKeyboardRemove())
+                await event.answer(
+                    "🚫 Вы были забанены и не можете пользоваться ботом.",
+                    reply_markup=ReplyKeyboardRemove(),
+                )
                 return
 
         return await handler(event, data)
