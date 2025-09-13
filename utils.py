@@ -2,12 +2,8 @@ from aiogram.fsm.state import State, StatesGroup
 from aiogram.types import ReplyKeyboardRemove
 
 from config import ADMIN_ID
-from database.postgres import (
-    StatsRepository,
-    UserRepository,
-    VipRepository,
-    initiate_pool,
-)
+from database.postgres import (StatsRepository, UserRepository, VipRepository,
+                               initiate_pool)
 
 
 class TaskForm(StatesGroup):

@@ -7,16 +7,9 @@ from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from config import BOT_TOKEN
 from keyboards import markup
-from utils import (
-    BanForm,
-    PostForm,
-    UnBanForm,
-    VipForm,
-    check_and_notify_fsm_state,
-    check_and_notify_registration,
-    is_admin,
-    send_user_message,
-)
+from utils import (BanForm, PostForm, UnBanForm, VipForm,
+                   check_and_notify_fsm_state, check_and_notify_registration,
+                   is_admin, send_user_message)
 
 router = Router()
 

@@ -2,24 +2,15 @@ import datetime
 
 from aiogram import F, Router
 from aiogram.enums import ParseMode
-from aiogram.filters import IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter, Command
+from aiogram.filters import (IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter,
+                             Command)
 from aiogram.fsm.context import FSMContext
-from aiogram.types import (
-    CallbackQuery,
-    LabeledPrice,
-    Message,
-    PreCheckoutQuery,
-    ReplyKeyboardRemove,
-)
+from aiogram.types import (CallbackQuery, LabeledPrice, Message,
+                           PreCheckoutQuery, ReplyKeyboardRemove)
 
 from keyboards import markup
-from utils import (
-    PaymentForm,
-    TaskForm,
-    check_and_notify_fsm_state,
-    check_and_notify_registration,
-    is_admin,
-)
+from utils import (PaymentForm, TaskForm, check_and_notify_fsm_state,
+                   check_and_notify_registration, is_admin)
 
 router_1 = Router()
 router_2 = Router()
