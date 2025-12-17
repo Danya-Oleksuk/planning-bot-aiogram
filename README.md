@@ -31,8 +31,6 @@ Made by [Danya-Oleksuk](https://github.com/Danya-Oleksuk), this bot helps you st
 
 ## 🚀 Getting Started
 
-Follow these steps to get the bot up and running on your machine.
-
 ### 1. Clone the Repository
 
 ```bash
