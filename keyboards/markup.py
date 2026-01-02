@@ -1,5 +1,4 @@
-from aiogram.types import (InlineKeyboardMarkup, KeyboardButton,
-                           ReplyKeyboardMarkup)
+from aiogram.types import InlineKeyboardMarkup, KeyboardButton, ReplyKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder, InlineKeyboardButton
 
 from config import ADMIN_ID
