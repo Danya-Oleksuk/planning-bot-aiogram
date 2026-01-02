@@ -7,9 +7,16 @@ from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 
 from config import BOT_TOKEN
 from keyboards import markup
-from utils import (BanForm, PostForm, UnBanForm, VipForm,
-                   check_and_notify_fsm_state, check_and_notify_registration,
-                   is_admin, send_user_message)
+from utils import (
+    BanForm,
+    PostForm,
+    UnBanForm,
+    VipForm,
+    check_and_notify_fsm_state,
+    check_and_notify_registration,
+    is_admin,
+    send_user_message,
+)
 
 router = Router()
 
@@ -44,7 +51,7 @@ async def show_all_users(message: Message, state: FSMContext, user_repo):
         users = await user_repo.get_all_users()
         users_data = [
             f"{i} - {x} - @{z} - {y.strftime('%Y-%m-%d %H:%M:%S')}"
-            + (f" - BANNED" if b else "")
+            + (" - BANNED" if b else "")
             for i, x, z, y, b in users
         ]
 
@@ -205,7 +212,7 @@ async def unban_user(message: Message, state: FSMContext, user_repo):
 
 
 @router.message(BanForm.user_id, F.text)
-async def fsm_state_for_user_ban(message: Message, state: FSMContext, user_repo):
+async def fsm_state_user_ban(message: Message, state: FSMContext, user_repo):
     if not await check_and_notify_registration(message, user_repo):
         return
 
@@ -235,7 +242,7 @@ async def fsm_state_for_user_ban(message: Message, state: FSMContext, user_repo)
                 )
             else:
                 await message.answer(
-                    f"⚠️ <b>Не получилось забанить юзера!</b>", parse_mode=ParseMode.HTML
+                    "⚠️ <b>Не получилось забанить юзера!</b>", parse_mode=ParseMode.HTML
                 )
         await state.clear()
     except ValueError:
@@ -249,7 +256,7 @@ async def fsm_state_for_user_ban(message: Message, state: FSMContext, user_repo)
 
 
 @router.message(UnBanForm.user_id, F.text)
-async def fsm_state_for_user_ban(message: Message, state: FSMContext, user_repo):
+async def fsm_state_user_unban(message: Message, state: FSMContext, user_repo):
     if not await check_and_notify_registration(message, user_repo):
         return
 
@@ -276,7 +283,7 @@ async def fsm_state_for_user_ban(message: Message, state: FSMContext, user_repo)
                 )
             else:
                 await message.answer(
-                    f"⚠️ <b>Не получилось забанить юзера!</b>", parse_mode=ParseMode.HTML
+                    "⚠️ <b>Не получилось забанить юзера!</b>", parse_mode=ParseMode.HTML
                 )
         else:
             await message.answer(
@@ -414,9 +421,7 @@ async def post_picture(message: Message, state: FSMContext, user_repo):
 async def is_post_confirm(
     callback_query: CallbackQuery, state: FSMContext, user_repo, vip_repo
 ):
-
     if callback_query.data == "post_confirm":
-
         bot = Bot(token=BOT_TOKEN)
         counter = 0
         data = await state.get_data()
